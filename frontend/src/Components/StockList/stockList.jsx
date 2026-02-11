@@ -150,7 +150,7 @@ function StockList() {
     ];
 
     return (
-        <div className="bg-[#0b1020] w-full h-full flex flex-col text-[#d1d4dc] font-sans">
+        <div className="bg-[#0b0e14] w-full h-full flex flex-col text-[#d1d4dc] font-sans">
             {/* 1. Header (Fixed) */}
             <div className="flex-none">
                 <div className="flex items-center justify-between p-3 border-b border-[#2a2e39]">

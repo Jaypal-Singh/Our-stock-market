@@ -9,7 +9,7 @@ function Trade() {
                 <div className="w-1/4 h-full rounded-lg border border-[#2a2e39] overflow-hidden">
                     <StockList />
                 </div>
-                <div className="flex-1 bg-[#0b1020] rounded-lg border border-[#2a2e39] overflow-hidden">
+                <div className="flex-1 bg-[#0b0e14] rounded-lg border border-[#2a2e39] overflow-hidden">
                     <TradeRoute />
                 </div>
             </div>
