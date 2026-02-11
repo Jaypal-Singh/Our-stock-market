@@ -66,9 +66,11 @@ function NavBar() {
                 </button>
 
                 {/* Profile */}
-                <div className="w-8 h-8 rounded-full bg-blue-900/40 text-blue-400 flex items-center justify-center font-medium text-xs border border-blue-800/50 cursor-pointer">
-                    JS
-                </div>
+                <Link to="/accounts">
+                    <div className="w-8 h-8 rounded-full bg-blue-900/40 text-blue-400 flex items-center justify-center font-medium text-xs border border-blue-800/50 cursor-pointer hover:bg-blue-900/60 transition-colors">
+                        JS
+                    </div>
+                </Link>
             </div>
         </div>
     );
