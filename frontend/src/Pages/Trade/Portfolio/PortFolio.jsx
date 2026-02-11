@@ -7,7 +7,7 @@ function Portfolio() {
     const [activeTab, setActiveTab] = useState('Overview');
 
     return (
-        <div className="flex flex-col h-full bg-[#0b1020] text-[#d1d4dc] font-sans">
+        <div className="flex flex-col h-full bg-[#0b0e14] text-[#d1d4dc] font-sans">
             {/* Top Navigation Bar */}
             <div className="flex items-center justify-between border-b border-[#2a2e39] px-6 h-12">
                 <div className="flex items-center gap-6 h-full">

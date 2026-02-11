@@ -4,7 +4,7 @@ import { Briefcase } from 'lucide-react';
 
 function Positions() {
     return (
-        <div className="h-full flex flex-col bg-[#0b1020] text-[#d1d4dc] font-sans">
+        <div className="h-full flex flex-col bg-[#0b0e14] text-[#d1d4dc] font-sans">
             {/* Top Summary Banner */}
             <div className="flex-none p-4 border-b border-[#2a2e39] bg-[#14161f]">
                 <div className="flex items-center gap-8">

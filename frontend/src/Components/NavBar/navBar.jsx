@@ -9,7 +9,7 @@ function NavBar() {
     };
 
     return (
-        <div className="bg-[#0b1020] border-b border-gray-800 h-13 flex items-center justify-between px-6 select-none font-sans">
+        <div className="bg-[#0b0e14] border-b border-gray-800 h-13 flex items-center justify-between px-6 select-none font-sans">
             {/* Left Section: Logo & Indices */}
             <div className="flex items-center gap-8">
                 {/* Logo */}
