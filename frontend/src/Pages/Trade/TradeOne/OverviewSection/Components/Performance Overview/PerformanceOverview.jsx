@@ -1,0 +1,68 @@
+import React from "react";
+
+function PerformanceOverview() {
+  return (
+    <div className="bg-[#131722] p-4 rounded-lg border border-[#2a2e39] space-y-6">
+      <h3 className="text-sm font-bold text-[#d1d4dc]">Performance Overview</h3>
+
+      {/* Top Metrics */}
+      <div className="grid grid-cols-5 gap-4 py-2">
+        <div>
+          <p className="text-[10px] text-[#868993]">Short Term</p>
+          <p className="text-[#f23645] text-xs font-bold">Very Negative</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#868993]">Long Term</p>
+          <p className="text-[#f23645] text-xs font-bold">Very Negative</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#868993]">Market Cap</p>
+          <p className="text-xs font-bold">Rs 4,170 Cr</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#868993]">1 year Return</p>
+          <p className="text-[#f23645] text-xs font-bold">-26.15%</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#868993]">Sector Return</p>
+          <p className="text-[#089981] text-xs font-bold">7.92%</p>
+        </div>
+      </div>
+
+      {/* Ranks Section */}
+      <div className="grid grid-cols-2 gap-8 pt-4 border-t border-[#2a2e39]">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-xs">Quality</span>
+            <span className="bg-[#f23645]/20 text-[#f23645] text-[10px] px-2 py-0.5 rounded">
+              BELOW AVERAGE 1/5
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs">Valuation</span>
+            <span className="bg-[#f7a821]/20 text-[#f7a821] text-[10px] px-2 py-0.5 rounded">
+              EXPENSIVE 2/5
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs">Financial</span>
+            <span className="bg-[#f23645]/20 text-[#f23645] text-[10px] px-2 py-0.5 rounded">
+              EXPENSIVE 1/5
+            </span>
+          </div>
+        </div>
+        <div className="bg-[#1c202b] p-3 rounded text-[11px] text-[#868993]">
+          <p>
+            • Below Average quality company basis long term financial
+            performance.
+          </p>
+          <p className="mt-2 text-white font-semibold">
+            Size - Ranks 9th out of 34 companies in sector.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default PerformanceOverview;
