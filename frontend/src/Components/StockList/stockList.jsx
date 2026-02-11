@@ -1,12 +1,3 @@
-// function StockList() {
-//     return (
-//         <div className="bg-green-500 w-1/4 h-full overflow-y-auto">
-//             <h1>stockList</h1>
-//         </div>
-//     )
-// }
-// export default StockList
-
 import Tooltips from "./tooltips";
 import React, { useState } from "react";
 import {
@@ -159,14 +150,14 @@ function StockList() {
     ];
 
     return (
-        <div className="bg-[#0b1020]  w-1/4 h-full flex flex-col text-[#d1d4dc] font-sans border-l border-[#2a2e39]">
+        <div className="bg-[#0b1020] w-full h-full flex flex-col text-[#d1d4dc] font-sans">
             {/* 1. Header (Fixed) */}
             <div className="flex-none">
                 <div className="flex items-center justify-between p-3 border-b border-[#2a2e39]">
                     <span className="text-sm font-bold">Watchlist</span>
                     <div className="flex gap-3 text-[#868993]">
-                        <Settings size={18} className="cursor-pointer hover:text-white" />
-                        <X size={20} className="cursor-pointer hover:text-white" />
+                        {/* <Settings size={18} className="cursor-pointer hover:text-white" /> */}
+                        {/* <X size={20} className="cursor-pointer hover:text-white" /> */}
                     </div>
                 </div>
 
@@ -207,8 +198,11 @@ function StockList() {
                         onMouseLeave={() => setHoveredIndex(null)}
                     >
                         {hoveredIndex === index && (
-                            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 z-50">
-                                <Tooltips />
+                            <div
+                                className={`absolute left-1/2 transform -translate-x-1/2 z-50 ${index === 0 ? "top-8" : "-top-10"
+                                    }`}
+                            >
+                                <Tooltips position={index === 0 ? "bottom" : "top"} />
                             </div>
                         )}
                         <div className="flex items-center gap-2">

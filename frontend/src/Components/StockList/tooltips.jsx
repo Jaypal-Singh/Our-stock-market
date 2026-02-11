@@ -1,6 +1,6 @@
 import { BarChart2, Flag, Link, MoreVertical, Trash2 } from "lucide-react";
 
-function Tooltips() {
+function Tooltips({ position }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
@@ -42,8 +42,14 @@ function Tooltips() {
                     </button>
                 </div>
 
-                {/* Arrow Pointer (Bottom) */}
-                <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-[#1e1e2d] border-b border-r border-gray-700 rotate-45 transform"></div>
+                {/* Arrow Pointer */}
+                {position === "bottom" ? (
+                    // Arrow at TOP (for bottom tooltip)
+                    <div className="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 bg-[#1e1e2d] border-t border-l border-gray-700 rotate-45 transform"></div>
+                ) : (
+                    // Arrow at BOTTOM (for top tooltip - default)
+                    <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-[#1e1e2d] border-b border-r border-gray-700 rotate-45 transform"></div>
+                )}
             </div>
         </div>
     );
