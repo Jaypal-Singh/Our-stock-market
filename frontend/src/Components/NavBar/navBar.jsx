@@ -51,10 +51,10 @@ function NavBar() {
             <div className="flex items-center gap-6 text-sm">
 
                 {/* <Link to="/markets" className={isActive("/markets") + " transition-colors"}>Markets</Link> */}
-                <Link to="/watchlist" className={isActive("/watchlist") + " transition-colors"}>Watchlist</Link>
-                <Link to="/portfolio" className={isActive("/portfolio") + " transition-colors"}>Portfolio</Link>
-                <Link to="/orders" className={isActive("/orders") + " transition-colors"}>Orders</Link>
-                <Link to="/positions" className={isActive("/positions") + " transition-colors"}>Positions</Link>
+                <Link to="/trade/watchlist" className={isActive("/trade/watchlist") + " transition-colors"}>Watchlist</Link>
+                <Link to="/trade/portfolio" className={isActive("/trade/portfolio") + " transition-colors"}>Portfolio</Link>
+                <Link to="/trade/orders" className={isActive("/trade/orders") + " transition-colors"}>Orders</Link>
+                <Link to="/trade/positions" className={isActive("/trade/positions") + " transition-colors"}>Positions</Link>
 
 
                 {/* Divider */}
@@ -66,7 +66,7 @@ function NavBar() {
                 </button>
 
                 {/* Profile */}
-                <Link to="/accounts">
+                <Link to="/trade/accounts">
                     <div className="w-8 h-8 rounded-full bg-blue-900/40 text-blue-400 flex items-center justify-center font-medium text-xs border border-blue-800/50 cursor-pointer hover:bg-blue-900/60 transition-colors">
                         JS
                     </div>

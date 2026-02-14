@@ -1,8 +1,48 @@
 import React, { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const { email, password } = formData;
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("userInfo", JSON.stringify(data));
+        // Also simpler token storage if needed, but usually userInfo contains the token
+        // Let's verify what the backend returns. It returns: _id, name, email, token.
+        navigate("/trade/watchlist");
+      } else {
+        alert(data.message || "Invalid Email or Password");
+      }
+    } catch (error) {
+      console.error("Error logging in:", error);
+      alert("Error logging in. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center font-sans text-gray-200">
@@ -11,7 +51,7 @@ const Login = () => {
           Login
         </h2>
 
-        <form className="space-y-5">
+        <form className="space-y-5" onSubmit={handleLogin}>
           {/* Email Field */}
           <div>
             <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
@@ -19,8 +59,12 @@ const Login = () => {
             </label>
             <input
               type="email"
+              name="email"
+              value={email}
+              onChange={handleChange}
               placeholder="name@example.com"
               className="w-full bg-[#1e222d] border border-gray-700 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+              required
             />
           </div>
 
@@ -37,8 +81,12 @@ const Login = () => {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
+                name="password"
+                value={password}
+                onChange={handleChange}
                 placeholder="••••••••"
                 className="w-full bg-[#1e222d] border border-gray-700 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                required
               />
               <button
                 type="button"
@@ -54,16 +102,16 @@ const Login = () => {
             </div>
           </div>
 
-          <button className="w-full bg-[#df3f3f] hover:bg-[#f04a4a] text-white font-bold py-3 rounded-md transition-all mt-4 uppercase text-xs tracking-widest">
+          <button type="submit" className="w-full bg-[#df3f3f] hover:bg-[#f04a4a] text-white font-bold py-3 rounded-md transition-all mt-4 uppercase text-xs tracking-widest">
             Log In
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
           New user?{" "}
-          <a href="/signup" className="text-blue-400 hover:underline">
+          <button onClick={() => navigate("/signup")} className="text-blue-400 hover:underline cursor-pointer">
             Create an account
-          </a>
+          </button>
         </p>
       </div>
     </div>

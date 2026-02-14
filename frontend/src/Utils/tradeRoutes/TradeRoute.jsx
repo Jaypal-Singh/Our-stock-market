@@ -7,12 +7,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 function TradeRoute() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/watchlist" />} />
-      <Route path="/watchlist" element={<TradeOne />} />
-      <Route path="/accounts" element={<Account />} />
-      <Route path="/orders" element={<Order />} />
-      <Route path="/portfolio" element={<Portfolio />} />
-      <Route path="/positions" element={<Position />} />
+      <Route path="/" element={<Navigate to="watchlist" replace />} />
+      <Route path="watchlist" element={<TradeOne />} />
+      <Route path="accounts" element={<Account />} />
+      <Route path="orders" element={<Order />} />
+      <Route path="portfolio" element={<Portfolio />} />
+      <Route path="positions" element={<Position />} />
     </Routes>
   );
 }
