@@ -1,6 +1,6 @@
 import NavBar from "../Components/NavBar/navBar";
 import StockList from "../Components/StockList/stockList";
-import TradeRoute from "../Utils/tradeRoutes/tradeRoute";
+import TradeRoute from "../Utils/tradeRoutes/TradeRoute";
 function Trade() {
     return (
         <div className="h-screen flex flex-col bg-black">
