@@ -1,18 +1,16 @@
-import navBar from "./Components/NavBar/navBar"
-import stockList from "./Components/StockList/stockList"
-// import trade from "./Pages/trade"
-import Signup from "./Pages/signup/Signup"
-import Trade from "./Pages/trade.jsx"
-import { BrowserRouter } from "react-router"
-function App() {
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Trade from "./Pages/trade.jsx";
+import LandingRoute from "./Utils/LandingRoute/LandingRoute.jsx";
 
+function App() {
   return (
-    <>
-      <BrowserRouter>
-      <Trade/>
-      </BrowserRouter>
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/trade/*" element={<Trade />} />
+        <Route path="/*" element={<LandingRoute />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App
