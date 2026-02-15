@@ -2,8 +2,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import NavBar from "../Components/NavBar/navBar";
 import StockList from "../Components/StockList/stockList";
 import TradeRoute from "../Utils/tradeRoutes/TradeRoute";
-import BottomNav from "../Components/Mobile/BottomNav";
-import MobileWatchlistPage from "../Components/Mobile/MobileWatchlistPage";
+import MobileNav from "../Components/NavBar/MobileNav/MobileNav";
+import MobileWatchlistPage from "../Components/Mobile/MobileWatchlist/MobileWatchlistPage";
 import Account from "./Trade/Accounts/Accounts";
 import Order from "./Trade/Orders/Orders";
 import Portfolio from "./Trade/Portfolio/PortFolio";
@@ -38,7 +38,7 @@ function Trade() {
                         <Route path="*" element={<Navigate to="watchlist" replace />} />
                     </Routes>
                 </div>
-                <BottomNav />
+                <MobileNav />
             </div>
         </div>
     );

@@ -8,7 +8,7 @@ function Accounts() {
         <div className="h-full flex flex-col bg-[#0b0e14] text-[#d1d4dc] font-sans overflow-y-auto customscrollbar">
             <AccountHeader />
 
-            <div className="p-6 max-w-7xl mx-auto w-full">
+            <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
                 <ProfileSection />
                 <FundsBanner />
             </div>

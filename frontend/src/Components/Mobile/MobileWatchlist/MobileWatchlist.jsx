@@ -1,5 +1,5 @@
 import React from 'react';
-import { stocks } from '../../Utils/stockData';
+import { stocks } from '../../../Utils/stockData';
 
 const MobileWatchlist = () => {
     return (

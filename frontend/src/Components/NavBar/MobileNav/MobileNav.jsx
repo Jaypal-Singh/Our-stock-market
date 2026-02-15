@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Briefcase, FileText, LayoutGrid, Star } from 'lucide-react';
 
-const BottomNav = () => {
+const MobileNav = () => {
     const location = useLocation();
 
     const isActive = (path) => {
@@ -32,8 +32,15 @@ const BottomNav = () => {
                 <LayoutGrid size={22} />
                 <span className={`text-[10px] font-medium ${location.pathname.startsWith('/trade/positions') ? 'text-[#d1d4dc]' : ''}`}>Positions</span>
             </Link>
+
+            <Link to="/trade/accounts" className={`flex flex-col items-center gap-1 ${isActive('/trade/accounts')}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-medium text-[10px] border ${location.pathname.startsWith('/trade/accounts') ? 'bg-blue-600/20 text-blue-400 border-blue-500/50' : 'bg-gray-800 text-gray-400 border-gray-700'}`}>
+                    JS
+                </div>
+                <span className={`text-[10px] font-medium ${location.pathname.startsWith('/trade/accounts') ? 'text-[#d1d4dc]' : ''}`}>Profile</span>
+            </Link>
         </div>
     );
 };
 
-export default BottomNav;
+export default MobileNav;

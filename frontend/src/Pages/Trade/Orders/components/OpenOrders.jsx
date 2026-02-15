@@ -61,7 +61,8 @@ const OpenOrders = ({ orders = [] }) => {
 
     return (
         <div className="bg-[#1e2330] rounded-lg border border-[#2a2e39] overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="text-[#868993] text-[10px] uppercase border-b border-[#2a2e39] bg-[#1a1d26]">
@@ -119,6 +120,58 @@ const OpenOrders = ({ orders = [] }) => {
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden">
+                {displayOrders.map((order, index) => (
+                    <div key={index} className="p-4 border-b border-[#2a2e39] last:border-0 bg-[#0b0e14]">
+                        <div className="flex justify-between items-start mb-2">
+                            <div className="flex gap-2 items-center">
+                                <span className={`text-[10px] font-bold ${order.type === 'BUY' ? 'text-[#5c6bc0] bg-[#5c6bc0]/10' : 'text-[#ef5350] bg-[#ef5350]/10'} px-2 py-0.5 rounded border ${order.type === 'BUY' ? 'border-[#5c6bc0]/20' : 'border-[#ef5350]/20'}`}>
+                                    {order.type}
+                                </span>
+                                <span className="text-[#d1d4dc] font-bold text-sm">{order.instrument}</span>
+                                <span className="text-[10px] text-[#868993] bg-[#2a2e39] px-1 rounded">{order.exchange}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${order.status === 'Open' ? 'bg-blue-500' : 'bg-yellow-500'}`}></span>
+                                <span className={`${order.statusColor} font-bold text-xs uppercase`}>{order.status}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex gap-4">
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">Qty</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">{order.qty}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">Price</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">₹{order.price}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">LTP</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">₹{order.ltp}</div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[10px] text-[#868993]">Product</div>
+                                <div className="text-[#d1d4dc] text-xs font-bold">{order.product}</div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons for Mobile */}
+                        <div className="flex gap-2">
+                            <button className="flex-1 bg-[#2a2e39] text-blue-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2">
+                                <Edit2 size={12} /> Modify
+                            </button>
+                            <button className="flex-1 bg-[#2a2e39] text-red-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2">
+                                <XCircle size={12} /> Cancel
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
