@@ -1,18 +1,24 @@
 import { BarChart2, Flag, Link, MoreVertical, Trash2 } from "lucide-react";
 
-function Tooltips({ position }) {
+function Tooltips({ position, onBuy, onSell }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
             <div className="flex items-center gap-1 bg-[#1e1e2d] px-2 py-1.5 rounded-md border border-gray-700 shadow-xl">
 
                 {/* Buy Button (B) */}
-                <button className="w-6 h-6 flex items-center justify-center bg-[#26a69a] hover:bg-[#2bbbad] text-white text-xs font-bold rounded shadow-sm transition-colors cursor-pointer">
+                <button
+                    onClick={onBuy}
+                    className="w-6 h-6 flex items-center justify-center bg-[#26a69a] hover:bg-[#2bbbad] text-white text-xs font-bold rounded shadow-sm transition-colors cursor-pointer"
+                >
                     B
                 </button>
 
                 {/* Sell Button (S) */}
-                <button className="w-6 h-6 flex items-center justify-center bg-[#ef5350] hover:bg-[#e57373] text-white text-xs font-bold rounded shadow-sm transition-colors cursor-pointer mr-2">
+                <button
+                    onClick={onSell}
+                    className="w-6 h-6 flex items-center justify-center bg-[#ef5350] hover:bg-[#e57373] text-white text-xs font-bold rounded shadow-sm transition-colors cursor-pointer mr-2"
+                >
                     S
                 </button>
 

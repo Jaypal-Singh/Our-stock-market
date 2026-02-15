@@ -4,20 +4,68 @@ import {
     Settings,
     X,
     Plus,
-
     Search,
     Filter,
     Sparkles,
     ChevronRight,
 } from "lucide-react";
 import { stocks } from "../../Utils/stockData";
+import BuyWindow from "../Buy&SellWindow/BuyWindow/BuyWindow";
+import SellWindow from "../Buy&SellWindow/SellWindow/SellWindow";
 
 function StockList() {
     const [hoveredIndex, setHoveredIndex] = useState(null);
+    const [selectedStock, setSelectedStock] = useState(null);
+    const [showBuyWindow, setShowBuyWindow] = useState(false);
+    const [showSellWindow, setShowSellWindow] = useState(false);
+
+    const handleBuyClick = (stock) => {
+        setSelectedStock(stock);
+        setShowBuyWindow(true);
+        setShowSellWindow(false);
+    };
+
+    const handleSellClick = (stock) => {
+        setSelectedStock(stock);
+        setShowSellWindow(true);
+        setShowBuyWindow(false);
+    };
+
+    const parsePrice = (priceStr) => {
+        if (!priceStr) return 0;
+        return parseFloat(priceStr.toString().replace(/,/g, ''));
+    };
+
+    const parsePercent = (percentStr) => {
+        if (!percentStr) return 0;
+        return parseFloat(percentStr.toString().replace('%', ''));
+    };
 
 
     return (
-        <div className="bg-[#0b0e14] w-full h-full flex flex-col text-[#d1d4dc] font-sans">
+        <div className="bg-[#0b0e14] w-full h-full flex flex-col text-[#d1d4dc] font-sans relative">
+            {/* Windows Layer */}
+            {showBuyWindow && selectedStock && (
+                <BuyWindow
+                    uid="buy-window-main"
+                    stockName={selectedStock.name}
+                    stockPrice={parsePrice(selectedStock.price)}
+                    stockChange={parseFloat(selectedStock.change)}
+                    stockChangePercent={parsePercent(selectedStock.percent)}
+                    onClose={() => setShowBuyWindow(false)}
+                />
+            )}
+            {showSellWindow && selectedStock && (
+                <SellWindow
+                    uid="sell-window-main"
+                    stockName={selectedStock.name}
+                    stockPrice={parsePrice(selectedStock.price)}
+                    stockChange={parseFloat(selectedStock.change)}
+                    stockChangePercent={parsePercent(selectedStock.percent)}
+                    onClose={() => setShowSellWindow(false)}
+                />
+            )}
+
             {/* 1. Header (Fixed) */}
             <div className="flex-none">
                 <div className="flex items-center justify-between p-3 border-b border-[#2a2e39]">
@@ -66,10 +114,14 @@ function StockList() {
                     >
                         {hoveredIndex === index && (
                             <div
-                                className={`absolute left-1/2 transform -translate-x-1/2 z-50 ${index === 0 ? "top-8" : "-top-10"
+                                className={`absolute left-1/2 transform -translate-x-1/2 z-50 ${index === 0 ? "top-8" : "-top-7"
                                     }`}
                             >
-                                <Tooltips position={index === 0 ? "bottom" : "top"} />
+                                <Tooltips
+                                    position={index === 0 ? "bottom" : "top"}
+                                    onBuy={() => handleBuyClick(stock)}
+                                    onSell={() => handleSellClick(stock)}
+                                />
                             </div>
                         )}
                         <div className="flex items-center gap-2">
