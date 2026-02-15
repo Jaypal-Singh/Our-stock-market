@@ -58,7 +58,8 @@ const PositionsTable = () => {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="text-[#868993] text-[10px] uppercase border-b border-[#2a2e39] bg-[#1a1d26]">
@@ -107,6 +108,56 @@ const PositionsTable = () => {
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden">
+                {positions.map((pos, index) => (
+                    <div key={index} className="p-4 border-b border-[#2a2e39] last:border-0 bg-[#0b0e14]">
+                        <div className="flex justify-between items-start mb-2">
+                            <div className="flex gap-2 items-center">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${pos.type === 'BUY' ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}>
+                                    {pos.type}
+                                </span>
+                                <span className="text-[#d1d4dc] font-bold text-sm">{pos.instrument}</span>
+                                <span className="text-[10px] text-[#868993] bg-[#2a2e39] px-1 rounded">{pos.exchange}</span>
+                            </div>
+                            <div className={`font-bold text-sm ${pos.isProfit ? 'text-green-500' : 'text-red-500'}`}>
+                                {pos.pnl}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex gap-4">
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">Qty</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">{pos.qty}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">Avg</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">₹{pos.avgPrice}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] text-[#868993]">LTP</div>
+                                    <div className="text-[#d1d4dc] text-xs font-bold">₹{pos.ltp}</div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-[10px] text-[#d1d4dc] bg-[#2a2e39] px-2 py-1 rounded border border-[#3e4455]">{pos.product}</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons for Mobile */}
+                        <div className="flex gap-2">
+                            <button className="flex-1 bg-[#2a2e39] text-red-500 py-2 rounded text-xs font-bold border border-[#3e4455] hover:bg-red-500/10 transition-colors">
+                                EXIT
+                            </button>
+                            <button className="flex-1 bg-[#2962ff] text-white py-2 rounded text-xs font-bold hover:bg-[#1e4bd1] transition-colors">
+                                ADD MORE
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {/* Footer Summary (Optional, sticking to bottom of table) */}

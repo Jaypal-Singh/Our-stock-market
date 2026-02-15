@@ -1,15 +1,15 @@
-
 import React, { useState } from 'react';
 import Overview from './Overview/Overview';
 import Equity from './Equity/Equity';
+import MobilePortfolio from './MobilePortFolio/MobilePortfolio';
 
 function Portfolio() {
     const [activeTab, setActiveTab] = useState('Overview');
 
     return (
         <div className="flex flex-col h-full bg-[#0b0e14] text-[#d1d4dc] font-sans">
-            {/* Top Navigation Bar */}
-            <div className="flex items-center justify-between border-b border-[#2a2e39] px-6 h-12">
+            {/* Desktop Navigation Bar */}
+            <div className="hidden md:flex items-center justify-between border-b border-[#2a2e39] px-6 h-12">
                 <div className="flex items-center gap-6 h-full">
                     <button
                         className={`h-full text-sm font-bold border-b-2 transition-colors ${activeTab === 'Overview' ? 'border-[#5c6bc0] text-[#5c6bc0]' : 'border-transparent text-[#868993] hover:text-white'}`}
@@ -32,10 +32,15 @@ function Portfolio() {
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto customscrollbar">
+            {/* Content Area (Desktop) */}
+            <div className="hidden md:block flex-1 overflow-y-auto customscrollbar">
                 {activeTab === 'Overview' && <Overview />}
                 {activeTab === 'Equity' && <Equity />}
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden h-full">
+                <MobilePortfolio />
             </div>
         </div>
     );

@@ -38,7 +38,8 @@ const OrderHistory = () => {
 
     return (
         <div className="bg-[#1e2330] rounded-lg border border-[#2a2e39] overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="text-[#868993] text-[10px] uppercase border-b border-[#2a2e39] bg-[#1a1d26]">
@@ -71,6 +72,42 @@ const OrderHistory = () => {
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden">
+                {history.map((order, index) => (
+                    <div key={index} className="p-4 border-b border-[#2a2e39] last:border-0 bg-[#0b0e14]">
+                        <div className="flex justify-between items-start mb-2">
+                            <div className="flex gap-2 items-center">
+                                <span className={`text-[10px] font-bold ${order.type === 'BUY' ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'} px-2 py-0.5 rounded border ${order.type === 'BUY' ? 'border-green-500/20' : 'border-red-500/20'}`}>
+                                    {order.type}
+                                </span>
+                                <span className="text-[#d1d4dc] font-bold text-sm">{order.instrument}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className={`${order.statusColor} font-bold text-xs uppercase`}>{order.status}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs">
+                            <div className="text-[#868993]">{order.time}</div>
+                            <div className="flex gap-4">
+                                <div>
+                                    <span className="text-[#868993] mr-1">Qty:</span>
+                                    <span className="text-[#d1d4dc] font-bold">{order.qty}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[#868993] mr-1">Avg:</span>
+                                    <span className="text-[#d1d4dc] font-bold">₹{order.avgPrice}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-[#2a2e39] flex justify-between items-center">
+                            <span className="text-[10px] text-[#868993] bg-[#2a2e39] px-2 py-0.5 rounded border border-[#3e4455]">{order.product}</span>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

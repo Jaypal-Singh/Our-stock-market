@@ -7,16 +7,16 @@ function Positions() {
         <div className="h-full flex flex-col bg-[#0b0e14] text-[#d1d4dc] font-sans">
             {/* Top Summary Banner */}
             <div className="flex-none p-4 border-b border-[#2a2e39] bg-[#14161f]">
-                <div className="flex items-center gap-8">
-                    <div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                    <div className="flex justify-between md:block">
                         <div className="text-[#868993] text-[10px] font-bold uppercase mb-1">Total P&L</div>
                         <div className="text-red-500 text-xl font-bold flex items-center gap-2">
                             -₹272.50
                             <span className="text-xs font-medium bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">-1.2%</span>
                         </div>
                     </div>
-                    <div className="h-8 w-px bg-[#2a2e39]"></div>
-                    <div>
+                    <div className="hidden md:block h-8 w-px bg-[#2a2e39]"></div>
+                    <div className="flex justify-between md:block pt-3 md:pt-0 border-t border-[#2a2e39] md:border-t-0">
                         <div className="text-[#868993] text-[10px] font-bold uppercase mb-1">Day's P&L</div>
                         <div className="text-green-500 text-xl font-bold flex items-center gap-2">
                             +₹360.00
