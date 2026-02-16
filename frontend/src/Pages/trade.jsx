@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import NavBar from "../Components/NavBar/navBar";
 import StockList from "../Components/StockList/stockList";
 import TradeRoute from "../Utils/tradeRoutes/TradeRoute";
@@ -8,8 +8,20 @@ import Account from "./Trade/Accounts/Accounts";
 import Order from "./Trade/Orders/Orders";
 import Portfolio from "./Trade/Portfolio/PortFolio";
 import Position from "./Trade/Positions/Positions";
+import MobileStockDetails from "../Components/Mobile/MobileStockDetails/MobileStockDetails";
+import MobileBuyOrder from "../Components/Mobile/MobileStockDetails/MobileOrder/MobileBuyOrder";
+import MobileSellOrder from "../Components/Mobile/MobileStockDetails/MobileOrder/MobileSellOrder";
+import OptionChainSection from "./Trade/TradeOne/OptionChainSection/OptionChainSection";
+import ChartSection from "./Trade/TradeOne/ChartsSection/ChartSection";
 
 function Trade() {
+    const location = useLocation();
+    const isStockDetailsPage = location.pathname.includes('stock-details') ||
+        location.pathname.includes('buy-order') ||
+        location.pathname.includes('sell-order') ||
+        location.pathname.includes('option-chain') ||
+        location.pathname.includes('chart');
+
     return (
         <div className="h-screen flex flex-col bg-black">
             {/* Desktop View */}
@@ -35,10 +47,15 @@ function Trade() {
                         <Route path="orders" element={<Order />} />
                         <Route path="positions" element={<Position />} />
                         <Route path="accounts" element={<Account />} />
+                        <Route path="stock-details" element={<MobileStockDetails />} />
+                        <Route path="buy-order" element={<MobileBuyOrder />} />
+                        <Route path="sell-order" element={<MobileSellOrder />} />
+                        <Route path="option-chain" element={<OptionChainSection />} />
+                        <Route path="chart" element={<ChartSection />} />
                         <Route path="*" element={<Navigate to="watchlist" replace />} />
                     </Routes>
                 </div>
-                <MobileNav />
+                {!isStockDetailsPage && <MobileNav />}
             </div>
         </div>
     );
