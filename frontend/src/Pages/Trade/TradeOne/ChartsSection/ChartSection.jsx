@@ -11,79 +11,114 @@ import {
   Redo2,
   Info,
   Clock,
+  ArrowLeft,
 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 function ChartSection() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const stock = location.state?.stock;
+  const isMobileView = location.pathname.includes('/trade/chart');
+
   return (
     <div className="flex flex-col h-full bg-[#131722] text-[#d1d4dc]">
-      {/* Upper Toolbar */}
-      <div className="flex items-center justify-between p-1 border-b border-[#2a2e39] bg-[#1c202b]">
-        <div className="flex items-center gap-3 px-2">
-          <span className="text-xs font-bold border-r border-[#2a2e39] pr-3">
-            5m
-          </span>
-          <div className="flex gap-4 items-center text-[#868993]">
-            <span className="flex items-center gap-1 text-[11px] hover:text-white cursor-pointer">
-              Indicators
+
+      {/* Mobile Header */}
+      {isMobileView && (
+        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#1c202b] shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="text-[#d1d4dc]">
+              <ArrowLeft size={24} />
+            </button>
+            <div>
+              <h1 className="text-white text-lg font-bold uppercase">{stock?.name || "CHART"}</h1>
+              {stock && (
+                <div className="text-[10px] font-bold flex items-center gap-1">
+                  <span className="text-[#868993]">{stock.exchange}</span>
+                  <span className="text-[#d1d4dc]">•</span>
+                  <span className="text-white">₹{stock.price}</span>
+                  <span className={stock.isUp ? 'text-[#089981]' : 'text-[#f23645]'}>{stock.percent}%</span>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Optional: Add chart settings or timeframe button here for mobile */}
+        </div>
+      )}
+
+      {/* Upper Toolbar - Desktop Only */}
+      {!isMobileView && (
+        <div className="flex items-center justify-between p-1 border-b border-[#2a2e39] bg-[#1c202b]">
+          <div className="flex items-center gap-3 px-2">
+            <span className="text-xs font-bold border-r border-[#2a2e39] pr-3">
+              5m
             </span>
-            <div className="h-4 w-[1px] bg-[#2a2e39]"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px]">Instant Orders</span>
-              <div className="w-7 h-4 bg-[#434651] rounded-full relative">
-                <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
+            <div className="flex gap-4 items-center text-[#868993]">
+              <span className="flex items-center gap-1 text-[11px] hover:text-white cursor-pointer">
+                Indicators
+              </span>
+              <div className="h-4 w-[1px] bg-[#2a2e39]"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px]">Instant Orders</span>
+                <div className="w-7 h-4 bg-[#434651] rounded-full relative">
+                  <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-4 px-2">
-          <div className="flex gap-3 text-[#868993]">
-            <Undo2 size={16} className="cursor-not-allowed" />
-            <Redo2 size={16} className="cursor-not-allowed" />
-          </div>
-          <div className="flex items-center gap-2 text-[#2962ff] text-[10px] font-bold border border-[#2a2e39] px-2 py-1 rounded">
-            SCALPER MODE <Maximize2 size={12} />
-          </div>
-          <div className="flex items-center gap-2 text-[#868993]">
-            <Save size={16} />
-            <Settings size={16} />
-            <Camera size={16} />
+          <div className="flex items-center gap-4 px-2">
+            <div className="flex gap-3 text-[#868993]">
+              <Undo2 size={16} className="cursor-not-allowed" />
+              <Redo2 size={16} className="cursor-not-allowed" />
+            </div>
+            <div className="flex items-center gap-2 text-[#2962ff] text-[10px] font-bold border border-[#2a2e39] px-2 py-1 rounded">
+              SCALPER MODE <Maximize2 size={12} />
+            </div>
+            <div className="flex items-center gap-2 text-[#868993]">
+              <Save size={16} />
+              <Settings size={16} />
+              <Camera size={16} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Price Info Bar */}
-      <div className="flex items-center p-2 text-[12px] border-b border-[#2a2e39]">
-        <span className="font-bold text-white mr-2">LXCHEM • 5 • NSE</span>
-        <div className="flex gap-2">
-          <span className="text-[#868993]">
-            O<span className="text-[#089981]">150.39</span>
-          </span>
-          <span className="text-[#868993]">
-            H<span className="text-[#089981]">150.85</span>
-          </span>
-          <span className="text-[#868993]">
-            L<span className="text-[#f23645]">150.00</span>
-          </span>
-          <span className="text-[#868993]">
-            C<span className="text-[#089981]">150.61</span>
-          </span>
-          <span className="text-[#089981] font-bold">+0.30 (+0.20%)</span>
+      {!isMobileView && (
+        <div className="flex items-center p-2 text-[12px] border-b border-[#2a2e39]">
+          <span className="font-bold text-white mr-2">LXCHEM • 5 • NSE</span>
+          <div className="flex gap-2">
+            <span className="text-[#868993]">
+              O<span className="text-[#089981]">150.39</span>
+            </span>
+            <span className="text-[#868993]">
+              H<span className="text-[#089981]">150.85</span>
+            </span>
+            <span className="text-[#868993]">
+              L<span className="text-[#f23645]">150.00</span>
+            </span>
+            <span className="text-[#868993]">
+              C<span className="text-[#089981]">150.61</span>
+            </span>
+            <span className="text-[#089981] font-bold">+0.30 (+0.20%)</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Chart Area */}
       <div className="relative flex-1 bg-[#131722] overflow-hidden">
         {/* Buy/Sell Floating Buttons */}
         <div className="absolute top-4 left-4 flex items-center z-10 shadow-lg">
           <div className="bg-[#089981] text-white px-3 py-1.5 rounded-l text-[11px] font-bold cursor-pointer hover:opacity-90">
-            BUY @ 149.96
+            BUY @ {stock?.price || "149.96"}
           </div>
           <div className="bg-[#2a2e39] text-white border-x border-black/20 px-2 py-1.5 text-[11px]">
             1
           </div>
           <div className="bg-[#f23645] text-white px-3 py-1.5 rounded-r text-[11px] font-bold cursor-pointer hover:opacity-90">
-            SELL @ 149.96
+            SELL @ {stock?.price || "149.96"}
           </div>
         </div>
 
@@ -99,29 +134,31 @@ function ChartSection() {
 
         {/* Right Axis Price */}
         <div className="absolute right-0 top-[40%] bg-[#089981] text-white text-[11px] px-1 font-bold z-20">
-          150.61
+          {stock?.price || "150.61"}
         </div>
       </div>
 
       {/* Footer Info Bar */}
-      <div className="flex items-center justify-between p-1 bg-[#1c202b] text-[#868993] text-[10px] border-t border-[#2a2e39]">
-        <div className="flex gap-3 px-2">
-          <span>1D</span>
-          <span>5D</span>
-          <span>1M</span>
-          <span>3M</span>
-          <span>1Y</span>
-          <span>5Y</span>
-        </div>
-        <div className="flex gap-4 px-2 items-center">
-          <span className="text-white">17:33:28 (UTC+5:30)</span>
-          <div className="flex gap-2">
-            <span>%</span>
-            <span>log</span>
-            <span className="text-[#2962ff]">auto</span>
+      {!isMobileView && (
+        <div className="flex items-center justify-between p-1 bg-[#1c202b] text-[#868993] text-[10px] border-t border-[#2a2e39]">
+          <div className="flex gap-3 px-2">
+            <span>1D</span>
+            <span>5D</span>
+            <span>1M</span>
+            <span>3M</span>
+            <span>1Y</span>
+            <span>5Y</span>
+          </div>
+          <div className="flex gap-4 px-2 items-center">
+            <span className="text-white">17:33:28 (UTC+5:30)</span>
+            <div className="flex gap-2">
+              <span>%</span>
+              <span>log</span>
+              <span className="text-[#2962ff]">auto</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
