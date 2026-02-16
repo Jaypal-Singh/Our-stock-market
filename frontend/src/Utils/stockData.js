@@ -1,135 +1,78 @@
 export const stocks = [
     {
-        name: "COALINDIA",
-        price: "430.95",
-        change: "-0.75",
-        percent: "-0.17%",
-        isUp: false,
+        name: "782GJ32",
+        symbol: "782GJ32-SG",
+        token: "10196",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     },
     {
-        name: "IOC",
-        price: "178.21",
-        change: "+2.05",
-        percent: "+1.16%",
-        isUp: true,
+        name: "794AP34",
+        symbol: "794AP34-SG",
+        token: "10206",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     },
     {
-        name: "ONGC",
-        price: "272.15",
-        change: "+5.55",
-        percent: "+2.08%",
-        isUp: true,
+        name: "765GJ29",
+        symbol: "765GJ29-SG",
+        token: "10233",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     },
     {
-        name: "NTPC",
-        price: "366.90",
-        change: "+5.00",
-        percent: "+1.38%",
-        isUp: true,
+        name: "MOM100INAV",
+        symbol: "MOM100INAV-EQ",
+        token: "10122",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     },
     {
-        name: "POWERGRID",
-        price: "294.35",
-        change: "+4.60",
-        percent: "+1.59%",
-        isUp: true,
+        name: "MOM50INAV",
+        symbol: "MOM50INAV-EQ",
+        token: "10127",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     },
     {
-        name: "ITC",
-        price: "321.40",
-        change: "-1.40",
-        percent: "-0.43%",
-        isUp: false,
-    },
-    {
-        name: "WIPRO",
-        price: "231.47",
-        change: "+1.39",
-        percent: "+0.60%",
-        isUp: true,
-    },
-    {
-        name: "SBIN",
-        price: "1,144.10",
-        change: "-1.90",
-        percent: "-0.17%",
-        isUp: false,
-    },
-    {
-        name: "JSWSTEEL",
-        price: "1,244.10",
-        change: "-0.90",
-        percent: "-0.07%",
-        isUp: false,
-    },
-    {
-        name: "BHARTIARTL",
-        price: "2,011.30",
-        change: "-26.90",
-        percent: "-1.32%",
-        isUp: false,
-    },
-    {
-        name: "SBIN",
-        price: "1,144.10",
-        change: "-1.90",
-        percent: "-0.17%",
-        isUp: false,
-    },
-    {
-        name: "JSWSTEEL",
-        price: "1,244.10",
-        change: "-0.90",
-        percent: "-0.07%",
-        isUp: false,
-    },
-    {
-        name: "BHARTIARTL",
-        price: "2,011.30",
-        change: "-26.90",
-        percent: "-1.32%",
-        isUp: false,
-    },
-    {
-        name: "SBIN",
-        price: "1,144.10",
-        change: "-1.90",
-        percent: "-0.17%",
-        isUp: false,
-    },
-    {
-        name: "JSWSTEEL",
-        price: "1,244.10",
-        change: "-0.90",
-        percent: "-0.07%",
-        isUp: false,
-    },
-    {
-        name: "BHARTIARTL",
-        price: "2,011.30",
-        change: "-26.90",
-        percent: "-1.32%",
-        isUp: false,
-    },
-    {
-        name: "SBIN",
-        price: "1,144.10",
-        change: "-1.90",
-        percent: "-0.17%",
-        isUp: false,
-    },
-    {
-        name: "JSWSTEEL",
-        price: "1,244.10",
-        change: "-0.90",
-        percent: "-0.07%",
-        isUp: false,
-    },
-    {
-        name: "BHARTIARTL",
-        price: "2,011.30",
-        change: "-26.90",
-        percent: "-1.32%",
-        isUp: false,
-    },
+        name: "BALKRISHNA",
+        symbol: "BALKRISHNA-EQ",
+        token: "10181",
+        exch_seg: "NSE",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
+    }
+];
+
+export const instrumentTypes = [
+    '',       // EQUITY
+    'FUTSTK', // Futures - Stock
+    'OPTSTK', // Options - Stock
+    'FUTIDX', // Futures - Index
+    'OPTIDX', // Options - Index
+    'INDEX',  // Index
+    'FUTCUR', // Futures - Currency
+    'OPTCUR', // Options - Currency
+    'FUTCOM', // Futures - Commodity
+    'AMXIDX', 'COMDTY', 'FUTBAS', 'FUTBLN',
+    'FUTENR', 'FUTIRC', 'FUTIRT', 'OPTBLN', 
+    'OPTFUT', 'OPTIRC', 'UNDCUR', 'UNDIRC', 
+    'UNDIRD', 'UNDIRT'
 ];
