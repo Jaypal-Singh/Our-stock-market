@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import angelRoutes from './routes/angelRoutes.js';
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ app.use(express.json());
 // Routes
 
 app.use('/api/auth', authRoutes);
+app.use('/api/angel', angelRoutes);
+
 
 app.get('/', (req, res) => {
     res.send('Backend is running!');
