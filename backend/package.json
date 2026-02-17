@@ -21,6 +21,7 @@
     "express-async-handler": "^1.2.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
+    "node-cron": "^4.2.1",
     "otplib": "^13.3.0",
     "smartapi-javascript": "^1.0.27",
     "socket.io": "^4.8.3"
