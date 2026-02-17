@@ -58,6 +58,34 @@ export const stocks = [
         change: "0",
         percent: "0%",
         isUp: true
+    },
+    {
+        name: "DABUR FUT",
+        symbol: "DABUR30MAR26FUT",
+        token: "51860",
+        exch_seg: "NFO",
+        instrumenttype: "FUTSTK",
+        expiry: "30MAR2026",
+        strike: "-1.000000",
+        lotsize: "1250",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
+    },
+    {
+        name: "DALBHARAT FUT",
+        symbol: "DALBHARAT30MAR26FUT",
+        token: "51861",
+        exch_seg: "NFO",
+        instrumenttype: "FUTSTK",
+        expiry: "30MAR2026",
+        strike: "-1.000000",
+        lotsize: "325",
+        price: "0",
+        change: "0",
+        percent: "0%",
+        isUp: true
     }
 ];
 
