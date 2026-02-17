@@ -18,7 +18,7 @@
     "react-draggable": "^4.5.0",
     "react-router": "^7.13.0",
     "react-router-dom": "^7.13.0",
-    "smartapi-javascript": "^1.0.27",
+    "socket.io-client": "^4.8.3",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
