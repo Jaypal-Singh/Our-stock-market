@@ -4,11 +4,8 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.route('/')
-    .get(protect, getWatchlist)
-    .post(protect, addToWatchlist);
-
-router.route('/:stockId')
-    .delete(protect, removeFromWatchlist);
+router.route('/getWatchlist').get(protect, getWatchlist)
+router.route('/addToWatchlist').post(protect, addToWatchlist);
+router.route('/removeFromWatchlist/:stockId').delete(protect, removeFromWatchlist);
 
 export default router;
