@@ -10,6 +10,7 @@ import WebSocketManager from './services/websocket/WebSocketManager.js';
 import SubscriptionManager from './services/websocket/SubscriptionManager.js';
 import DataStreamHandler from './services/websocket/DataStreamHandler.js';
 import { SUBSCRIPTION_MODES } from './constants/subscriptionModes.js';
+import watchlistRoute from './routes/watchlistRoutes.js'
 import { createLogger } from './utils/logger.js';
 
 dotenv.config();
@@ -52,6 +53,9 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/angel', angelRoutes);
+app.use('/api/watchlist', watchlistRoute);
+
+
 
 app.get('/', (req, res) => {
     res.send('Backend is running!');
