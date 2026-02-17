@@ -4,10 +4,13 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import angelRoutes from './routes/angelRoutes.js';
+import watchlistRoutes from './routes/watchlistRoutes.js';
+import setupCronJobs from './cron/fetchInstrumentsCron.js';
 
 dotenv.config();
 
 connectDB();
+setupCronJobs();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +23,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/angel', angelRoutes);
+app.use('/api/watchlist', watchlistRoutes);
 
 
 app.get('/', (req, res) => {
