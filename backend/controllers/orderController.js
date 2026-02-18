@@ -21,6 +21,7 @@ export const placeOrder = async (req, res) => {
             producttype,
 
             price,
+            marketPrice,
             quantity,
             squareoff,
             stoploss,
@@ -126,13 +127,19 @@ export const placeOrder = async (req, res) => {
                 newOrder.uniqueorderid = response.data.uniqueorderid; // Capture unique ID
 
                 // SIMULATION LOGIC:
-                // MARKET Orders -> execute immediately
+                // MARKET Orders -> execute immediately at current market price
                 // LIMIT Orders -> stay pending (until price match logic is implemented or manual update)
                 if (ordertype === "LIMIT") {
                     newOrder.orderstatus = "pending";
+                    newOrder.averagePrice = price; // Limit price as avg price
                     newOrder.message = "Order Placed (Pending)";
                 } else {
+                    // MARKET order: execute at current market price
+                    const executionPrice = marketPrice || price || 0;
                     newOrder.orderstatus = "complete";
+                    newOrder.averagePrice = executionPrice;
+                    newOrder.filledShares = quantity;
+                    newOrder.unfilledShares = 0;
                     newOrder.message = "Order Executed";
                 }
 

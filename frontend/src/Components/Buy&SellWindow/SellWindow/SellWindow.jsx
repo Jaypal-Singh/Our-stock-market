@@ -64,6 +64,7 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 75.47, 
                 producttype: productType === "INT" ? "INTRADAY" : "DELIVERY",
                 duration: "DAY",
                 price: isMarket ? 0 : price,
+                marketPrice: stockPrice, // Current market price for avg price calculation
                 quantity: qty,
                 userId: userId
             };

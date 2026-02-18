@@ -57,6 +57,7 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, 
                 producttype: productType === "INT" ? "INTRADAY" : "DELIVERY",
                 duration: "DAY",
                 price: isMarket ? 0 : price,
+                marketPrice: stockPrice, // Current market price for avg price calculation
                 quantity: qty,
                 userId: userId
             };
