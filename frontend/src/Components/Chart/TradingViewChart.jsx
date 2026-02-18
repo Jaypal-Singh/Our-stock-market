@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
-import { io } from 'socket.io-client';
+import { useSocket } from '../../context/SocketContext';
 import axios from 'axios';
 import { parseTickData } from '../../utils/stockDataParser';
 
@@ -277,67 +277,70 @@ const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) 
     }, [stock, interval]); // Re-fetch on stock/interval change
 
     // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // 3. Socket / Real-time Updates
     // -------------------------------------------------------------------------
     useEffect(() => {
-        if (!stock || !stock.token) return;
+        if (!stock || !stock.token || !socket || !isConnected) return;
 
-        const socket = io(BACKEND_URL);
-        socketRef.current = socket;
+        console.log(`🔌 Subscribing to ${stock.symbol} (${stock.token}) for Chart updates`);
 
-        socket.on('connect', () => {
-            console.log("Chart Socket Connected");
-            socket.emit('subscribe_stocks', { tokens: [stock], mode: 1 });
+        socket.emit('subscribe_stocks', {
+            tokens: [stock],
+            mode: 1 // Using Mode 1 (LTP)
         });
 
-        socket.on('tick_data', (rawTickData) => {
+        const handleTick = (tickData) => {
             if (!isChartReadyRef.current) return;
+            try {
+                const parsedTick = parseTickData(tickData);
+                if (parsedTick && parsedTick.token === stock.token) {
+                    const price = parsedTick.ltp;
+                    const timestamp = parsedTick.timestamp || Date.now();
+                    const barTime = getBarTime(timestamp, interval);
 
-            const tick = parseTickData(rawTickData);
-            if (tick && tick.token === stock.token) {
-                const price = Number(tick.ltp);
-                const timestamp = tick.timestamp || Date.now();
-                const barTime = getBarTime(timestamp, interval);
+                    const currentData = candleDataRef.current;
+                    const lastBar = currentData[currentData.length - 1];
 
-                const currentData = candleDataRef.current;
-                const lastBar = currentData[currentData.length - 1];
+                    let updatedBar;
 
-                let updatedBar;
+                    if (lastBar && lastBar.time === barTime) {
+                        // Update existing bar
+                        updatedBar = {
+                            ...lastBar,
+                            high: Math.max(lastBar.high, price),
+                            low: Math.min(lastBar.low, price),
+                            close: price
+                        };
+                        currentData[currentData.length - 1] = updatedBar;
+                    } else {
+                        // Create new bar
+                        updatedBar = {
+                            time: barTime,
+                            open: price,
+                            high: price,
+                            low: price,
+                            close: price
+                        };
+                        currentData.push(updatedBar);
+                    }
 
-                if (lastBar && lastBar.time === barTime) {
-                    // Update existing bar
-                    updatedBar = {
-                        ...lastBar,
-                        high: Math.max(lastBar.high, price),
-                        low: Math.min(lastBar.low, price),
-                        close: price
-                    };
-                    // Update Ref (mutable update to last element)
-                    currentData[currentData.length - 1] = updatedBar;
-                } else {
-                    // Create new bar
-                    updatedBar = {
-                        time: barTime,
-                        open: price,
-                        high: price,
-                        low: price,
-                        close: price
-                    };
-                    // Append to Ref
-                    currentData.push(updatedBar);
+                    // Update Chart Series
+                    if (seriesRef.current) {
+                        seriesRef.current.update(updatedBar);
+                    }
                 }
-
-                // Update Chart Series
-                if (seriesRef.current) {
-                    seriesRef.current.update(updatedBar);
-                }
+            } catch (err) {
+                console.error("Chart Tick Error:", err);
             }
-        });
+        };
+
+        socket.on('tick_data', handleTick);
 
         return () => {
-            socket.disconnect();
+            socket.off('tick_data', handleTick);
         };
-    }, [stock, interval, getBarTime]);
+    }, [stock, isConnected, socket, interval, getBarTime]);
 
     return (
         <div className="w-full h-full relative" style={{ minHeight: '100%' }}>
