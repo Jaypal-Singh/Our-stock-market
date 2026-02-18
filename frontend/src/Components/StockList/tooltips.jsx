@@ -1,6 +1,6 @@
 import { BarChart2, Flag, Link, MoreVertical, Trash2 } from "lucide-react";
 
-function Tooltips({ position, onBuy, onSell }) {
+function Tooltips({ position, onBuy, onSell, onDelete }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
@@ -37,7 +37,7 @@ function Tooltips({ position, onBuy, onSell }) {
                         <Flag size={16} />
                     </button>
 
-                    <button className="hover:text-white transition-colors cursor-pointer" title="Delete">
+                    <button onClick={onDelete} className="hover:text-red-400 transition-colors cursor-pointer" title="Delete">
                         <Trash2 size={16} />
                     </button>
 

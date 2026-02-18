@@ -1,5 +1,5 @@
 import express from 'express';
-import { placeOrder, getOrderHistory } from '../controllers/orderController.js';
+import { placeOrder, getOrderHistory, cancelOrder, modifyOrder } from '../controllers/orderController.js';
 
 const router = express.Router();
 
@@ -16,5 +16,19 @@ router.post('/placeOrder', placeOrder);
  * @access  Private
  */
 router.get('/history', getOrderHistory);
+
+/**
+ * @route   POST /api/order/cancel
+ * @desc    Cancel an open order
+ * @access  Private
+ */
+router.post('/cancel', cancelOrder);
+
+/**
+ * @route   POST /api/order/modify
+ * @desc    Modify an open order
+ * @access  Private
+ */
+router.post('/modify', modifyOrder);
 
 export default router;

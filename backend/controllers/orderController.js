@@ -124,22 +124,34 @@ export const placeOrder = async (req, res) => {
                 // Success
                 newOrder.angelOrderId = response.data.orderid;
                 newOrder.uniqueorderid = response.data.uniqueorderid; // Capture unique ID
-                newOrder.message = response.message;
-                newOrder.orderstatus = "complete"; // Simulate immediate completion
+
+                // SIMULATION LOGIC:
+                // MARKET Orders -> execute immediately
+                // LIMIT Orders -> stay pending (until price match logic is implemented or manual update)
+                if (ordertype === "LIMIT") {
+                    newOrder.orderstatus = "pending";
+                    newOrder.message = "Order Placed (Pending)";
+                } else {
+                    newOrder.orderstatus = "complete";
+                    newOrder.message = "Order Executed";
+                }
+
                 await newOrder.save();
 
                 return res.status(200).json({
                     success: true,
-                    message: "Order placed successfully (Paper)",
+                    message: newOrder.message,
                     data: {
                         orderId: newOrder._id,
                         angelOrderId: response.data.orderid,
-                        script: response.data.script
+                        script: response.data.script,
+                        status: newOrder.orderstatus
                     }
                 });
             } else {
                 // Failed at Angel One
                 newOrder.message = response.message || "Unknown error from Angel One";
+                newOrder.orderstatus = "rejected";
                 await newOrder.save();
 
                 return res.status(400).json({
@@ -197,5 +209,89 @@ export const getOrderHistory = async (req, res) => {
             message: "Failed to fetch order history",
             error: error.message
         });
+    }
+};
+/**
+ * Cancel an Order
+ * POST /api/order/cancel
+ */
+export const cancelOrder = async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        const userId = req.user ? req.user._id : req.body.userId;
+
+        if (!orderId) {
+            return res.status(400).json({ success: false, message: "Order ID is required" });
+        }
+
+        const order = await Order.findOne({ _id: orderId, userId });
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        if (['complete', 'rejected', 'cancelled'].includes(order.orderstatus)) {
+            return res.status(400).json({ success: false, message: "Cannot cancel a completed or rejected order" });
+        }
+
+        order.orderstatus = 'cancelled';
+        order.message = 'Order Cancelled by User';
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order Cancelled Successfully",
+            data: { orderId: order._id, status: order.orderstatus }
+        });
+
+    } catch (error) {
+        logger.error('Cancel Order Error:', error);
+        return res.status(500).json({ success: false, message: "Failed to cancel order", error: error.message });
+    }
+};
+
+/**
+ * Modify an Order
+ * POST /api/order/modify
+ */
+export const modifyOrder = async (req, res) => {
+    try {
+        const { orderId, price, quantity, ordertype } = req.body;
+        const userId = req.user ? req.user._id : req.body.userId;
+
+        if (!orderId) {
+            return res.status(400).json({ success: false, message: "Order ID is required" });
+        }
+
+        const order = await Order.findOne({ _id: orderId, userId });
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        if (['complete', 'rejected', 'cancelled'].includes(order.orderstatus)) {
+            return res.status(400).json({ success: false, message: "Cannot modify a completed or rejected order" });
+        }
+
+        // Update fields if provided
+        if (price !== undefined) order.price = price;
+        if (quantity !== undefined) {
+            order.quantity = quantity;
+            order.unfilledShares = quantity - order.filledShares; // Update unfilled shares logic roughly
+        }
+        if (ordertype !== undefined) order.ordertype = ordertype;
+
+        order.message = 'Order Modified';
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order Modified Successfully",
+            data: order
+        });
+
+    } catch (error) {
+        logger.error('Modify Order Error:', error);
+        return res.status(500).json({ success: false, message: "Failed to modify order", error: error.message });
     }
 };

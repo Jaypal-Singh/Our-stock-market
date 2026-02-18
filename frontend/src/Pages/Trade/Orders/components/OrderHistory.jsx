@@ -1,64 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
 
-const OrderHistory = () => {
-    const [history, setHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-    useEffect(() => {
-        const fetchOrderHistory = async () => {
-            try {
-                // Get User ID from localStorage
-                const userInfo = localStorage.getItem("userInfo");
-                const user = userInfo ? JSON.parse(userInfo) : null;
-                const userId = user ? user._id : null;
-
-                if (!userId) {
-                    setError("User not logged in");
-                    setLoading(false);
-                    return;
-                }
-
-                const response = await fetch(`${API_URL}/api/order/history?userId=${userId}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    // Start formatting orders
-                    const formattedOrders = data.data.map(order => ({
-                        time: new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                        type: order.transactiontype,
-                        instrument: order.tradingsymbol,
-                        product: order.producttype === "INTRADAY" ? "Intraday" : "Delivery",
-                        qty: `${order.filledShares || 0}/${order.quantity}`,
-                        avgPrice: (order.averagePrice || order.price || 0).toFixed(2),
-                        status: order.orderstatus || "Pending", // Fallback status
-                        statusColor: (order.orderstatus === "complete" || order.orderstatus === "success")
-                            ? "text-green-500"
-                            : (order.orderstatus === "rejected" || order.orderstatus === "failure")
-                                ? "text-red-500"
-                                : "text-yellow-500",
-                        originalOrder: order // Keep original data if needed
-                    }));
-                    setHistory(formattedOrders);
-                } else {
-                    setError(data.message || "Failed to fetch orders");
-                }
-            } catch (err) {
-                console.error("Order History Error:", err);
-                setError("Network error");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchOrderHistory();
-    }, []);
-
-    if (loading) return <div className="text-center text-[#868993] py-8">Loading order history...</div>;
-    if (error) return <div className="text-center text-red-500 py-8">{error}</div>;
+const OrderHistory = ({ orders = [] }) => {
+    // Format orders for display
+    const history = orders.map(order => ({
+        time: new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        type: order.transactiontype,
+        instrument: order.tradingsymbol,
+        product: order.producttype === "INTRADAY" ? "Intraday" : "Delivery",
+        qty: `${order.filledShares || 0}/${order.quantity}`,
+        avgPrice: (order.averagePrice || order.price || 0).toFixed(2),
+        status: order.orderstatus,
+        statusColor: (order.orderstatus === "complete")
+            ? "text-green-500"
+            : (order.orderstatus === "rejected" || order.orderstatus === "cancelled")
+                ? "text-red-500"
+                : "text-yellow-500",
+        originalOrder: order
+    }));
 
     return (
         <div className="bg-[#1e2330] rounded-lg border border-[#2a2e39] overflow-hidden">

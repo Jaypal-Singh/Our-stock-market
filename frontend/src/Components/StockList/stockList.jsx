@@ -16,9 +16,14 @@ import SearchContainer from "./Search/SearchContainer";
 import StockDetailsOverlay from "./StockDetailsOverlay";
 import EmptyWatchlist from "../Common/EmptyWatchlist";
 import CreateWatchlistModal from "../Common/CreateWatchlistModal";
+import WatchlistContextMenu from "../Common/WatchlistContextMenu";
+import RenameWatchlistModal from "../Common/RenameWatchlistModal";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
 function StockList() {
+    const navigate = useNavigate();
+    const location = useLocation();
     // Use the hook to get real-time stock data
     const { stocks, isConnected, error, addStock } = useAngelOneSocket();
     const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -31,9 +36,10 @@ function StockList() {
     const [selectedDetailStock, setSelectedDetailStock] = useState(null);
 
     const [watchlists, setWatchlists] = useState([]);
-    const [activeWatchlist, setActiveWatchlist] = useState();
     const [activeStocks, setActiveStocks] = useState([]);
     const searchRef = useRef(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeWatchlist, setActiveWatchlist] = useState(null);
 
     // Helper: get auth config from stored userInfo
     const getAuthConfig = () => {
@@ -71,13 +77,15 @@ function StockList() {
             const config = getAuthConfig();
             if (!config) return;
             const res = await axios.get('http://localhost:5000/api/watchlist/getAllWatchlists', config);
-            setWatchlists(res.data);
-            if (res.data.length > 0 && !activeWatchlist) {
+            console.log("Fetched watchlists:", res.data);
+            setWatchlists(res.data || []);
+            if (res.data && res.data.length > 0 && !activeWatchlist) {
                 setActiveWatchlist(res.data[0]); // Default to first
             }
             // If activeWatchlist was already set (e.g. from state persistence), ensure it's valid?
         } catch (error) {
             console.error("Error fetching watchlists", error);
+            setWatchlists([]);
         }
     };
 
@@ -92,6 +100,7 @@ function StockList() {
     }, [activeWatchlist]);
 
     const fetchWatchlistStocks = async (name) => {
+        setIsLoading(true);
         try {
             const config = getAuthConfig();
             if (!config) return;
@@ -102,6 +111,7 @@ function StockList() {
                 setActiveStocks([]);
                 return;
             }
+            let mergedStocks = instruments;
 
             // Fetch live quotes for these instruments
             try {
@@ -109,31 +119,43 @@ function StockList() {
                 const liveData = await fetchStockQuotes(instruments);
 
                 // Merge live data into instruments
-                const merged = instruments.map(inst => {
-                    const live = liveData.find(l => l.token === inst.token);
-                    if (live) {
-                        return {
-                            ...inst,
-                            price: live.ltp || live.price || 0,
-                            ltp: live.ltp || 0,
-                            change: live.netChange || live.change || 0,
-                            changePercent: live.percentChange || live.changePercent || 0,
-                            open: live.open,
-                            high: live.high,
-                            low: live.low,
-                            close: live.close,
-                            lastUpdated: new Date().toISOString(),
-                        };
-                    }
-                    return inst;
-                });
-                setActiveStocks(merged);
+                if (liveData && Array.isArray(liveData)) {
+                    mergedStocks = instruments.map(inst => {
+                        const live = liveData.find(l => l.token === inst.token);
+                        if (live) {
+                            return {
+                                ...inst,
+                                price: live.ltp || live.price || 0,
+                                ltp: live.ltp || 0,
+                                change: live.netChange || live.change || 0,
+                                changePercent: live.percentChange || live.changePercent || 0,
+                                open: live.open,
+                                high: live.high,
+                                low: live.low,
+                                close: live.close,
+                                lastUpdated: new Date().toISOString(),
+                            };
+                        }
+                        return inst;
+                    });
+                }
+                setActiveStocks(mergedStocks);
             } catch (quoteErr) {
                 console.error("Error fetching live quotes, showing static data", quoteErr);
                 setActiveStocks(instruments);
             }
+            // --- Auto Select First Stock Logic ---
+            if (mergedStocks.length > 0) {
+                // Check if we already have a stock in state to avoid loop
+                // if (!location.state?.stock) {
+                //     console.log("Navigating to set default stock", mergedStocks[0].symbol);
+                //     navigate('/trade/watchlist', { state: { stock: mergedStocks[0] }, replace: true });
+                // }
+            }
         } catch (error) {
             console.error("Error fetching stocks", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -153,6 +175,22 @@ function StockList() {
             }
         } catch (error) {
             console.error("Error adding stock to watchlist", error);
+        }
+    };
+
+    // Remove stock from active watchlist via backend API
+    const handleRemoveStockFromWatchlist = async (stock) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const watchlistName = activeWatchlist?.name || activeWatchlist;
+            await axios.delete(`http://localhost:5000/api/watchlist/removeFromWatchlist/${stock._id}?watchlistName=${watchlistName}`, config);
+            // Refresh the stock list after removing
+            if (typeof watchlistName === 'string') {
+                fetchWatchlistStocks(watchlistName);
+            }
+        } catch (error) {
+            console.error("Error removing stock from watchlist", error);
         }
     };
 
@@ -188,10 +226,49 @@ function StockList() {
             if (!config) return;
             const res = await axios.post('http://localhost:5000/api/watchlist/createWatchlist', { name }, config);
             await fetchWatchlists();
-            // Set the newly created watchlist as active
             setActiveWatchlist(res.data);
         } catch (error) {
             console.error("Error creating watchlist", error);
+        }
+    };
+
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState(null); // { x, y, watchlist }
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [renameTarget, setRenameTarget] = useState(null);
+
+    const handleTabRightClick = (e, list) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, watchlist: list });
+    };
+
+    const handleDeleteWatchlist = async (watchlist) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            await axios.delete(`http://localhost:5000/api/watchlist/deleteWatchlist/${watchlist._id}`, config);
+            await fetchWatchlists();
+            // If deleted the active one, switch to first available
+            if (activeWatchlist?._id === watchlist._id) {
+                setActiveWatchlist(null);
+            }
+        } catch (error) {
+            console.error("Error deleting watchlist", error);
+        }
+    };
+
+    const handleRenameWatchlist = async (newName) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const res = await axios.put(`http://localhost:5000/api/watchlist/renameWatchlist/${renameTarget._id}`, { name: newName }, config);
+            await fetchWatchlists();
+            // If renamed the active one, update it
+            if (activeWatchlist?._id === renameTarget._id) {
+                setActiveWatchlist(res.data);
+            }
+        } catch (error) {
+            console.error("Error renaming watchlist", error);
         }
     };
 
@@ -264,17 +341,18 @@ function StockList() {
 
                 {/* Tabs */}
                 <div className="flex items-center justify-between px-3 py-2 text-[13px] border-b border-[#2a2e39]">
-                    <div className="flex overflow-x-auto no-scrollbar gap-4 flex-1">
-                        {watchlists.map((list) => (
+                    <div className="flex overflow-x-auto customscrollbar-thin gap-4 flex-1">
+                        {watchlists?.map((list) => (
                             <span
-                                key={list._id || list}
+                                key={list?._id || list}
                                 onClick={() => setActiveWatchlist(list)}
-                                className={`pb-2 cursor-pointer whitespace-nowrap border-b-2 transition-colors ${(activeWatchlist?._id === list._id || activeWatchlist === list)
+                                onContextMenu={(e) => handleTabRightClick(e, list)}
+                                className={`pb-2 cursor-pointer whitespace-nowrap border-b-2 transition-colors ${(activeWatchlist?._id === list?._id || activeWatchlist === list)
                                     ? "text-[#2962ff] border-[#2962ff]"
                                     : "text-[#868993] border-transparent hover:text-white"
                                     }`}
                             >
-                                {list.name || list}
+                                {list?.name || list}
                             </span>
                         ))}
                     </div>
@@ -304,7 +382,22 @@ function StockList() {
                     But activeStocks might lack live data properties if not merged.
                     For now, let's render activeStocks and rely on whatever properties used.
                 */}
-                {activeStocks && activeStocks.length > 0 ? (
+                {isLoading ? (
+                    <div className="px-0">
+                        {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className="flex justify-between items-center px-4 py-2.5 border-b border-[#1e222d]">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-24 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-10 bg-[#1e222d] rounded animate-pulse"></div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="h-3 w-16 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : activeStocks && activeStocks.length > 0 ? (
                     activeStocks.map((stock, index) => {
                         if (!stock || typeof stock !== 'object') return null;
 
@@ -321,6 +414,10 @@ function StockList() {
                                 className="relative flex justify-between items-center px-4 py-2.5 hover:bg-[#2a2e39] cursor-pointer border-b border-[#1e222d]"
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
+                                onClick={() => {
+                                    console.log('Stock clicked:', stock.symbol);
+                                    navigate('/trade/watchlist', { state: { stock } });
+                                }}
                             >
                                 {hoveredIndex === index && (
                                     <div
@@ -331,6 +428,7 @@ function StockList() {
                                             position={index === 0 ? "bottom" : "top"}
                                             onBuy={() => handleBuyClick(stock)}
                                             onSell={() => handleSellClick(stock)}
+                                            onDelete={() => handleRemoveStockFromWatchlist(stock)}
                                         />
                                     </div>
                                 )}
@@ -386,6 +484,28 @@ function StockList() {
         <span>OPTIONS QUICK LIST</span>
         <ChevronRight size={16} className="bg-[#2a2e39] rounded-full" />
       </div> */}
+
+            {/* Context Menu */}
+            {contextMenu && (
+                <WatchlistContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onRename={() => {
+                        setRenameTarget(contextMenu.watchlist);
+                        setIsRenameModalOpen(true);
+                    }}
+                    onDelete={() => handleDeleteWatchlist(contextMenu.watchlist)}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {/* Rename Modal */}
+            <RenameWatchlistModal
+                isOpen={isRenameModalOpen}
+                onClose={() => { setIsRenameModalOpen(false); setRenameTarget(null); }}
+                onRename={handleRenameWatchlist}
+                currentName={renameTarget?.name || ''}
+            />
         </div>
     );
 }
