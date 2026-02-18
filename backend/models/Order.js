@@ -40,11 +40,7 @@ const OrderSchema = new mongoose.Schema({
         enum: ['DELIVERY', 'INTRADAY', 'CARRYFORWARD', 'MARGIN'],
         required: true
     },
-    duration: {
-        type: String,
-        enum: ['DAY', 'IOC'],
-        default: 'DAY'
-    },
+
     price: {
         type: Number,
         required: true
@@ -69,11 +65,7 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    status: {
-        type: String,
-        enum: ['PENDING', 'OPEN', 'EXECUTED', 'CANCELLED', 'REJECTED', 'FAILED'],
-        default: 'PENDING'
-    },
+
     angelOrderId: {
         type: String
     },
@@ -82,6 +74,34 @@ const OrderSchema = new mongoose.Schema({
     },
     tag: {
         type: String // Optional tag for tracking
+    },
+    // --- Execution Details (Angel One Parity) ---
+    averagePrice: {
+        type: Number,
+        default: 0
+    },
+    filledShares: {
+        type: Number,
+        default: 0
+    },
+    unfilledShares: {
+        type: Number,
+        default: function() { return this.quantity; }
+    },
+    orderstatus: { // Raw status text from Angel One (e.g., "complete", "rejected")
+        type: String
+    },
+    uniqueorderid: {
+        type: String
+    },
+    updateTime: {
+        type: String
+    },
+    exchtime: {
+        type: String
+    },
+    exchorderupdatetime: {
+        type: String
     }
 }, {
     timestamps: true

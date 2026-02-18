@@ -19,7 +19,7 @@ export const placeOrder = async (req, res) => {
             exchange,
             ordertype,
             producttype,
-            duration,
+
             price,
             quantity,
             squareoff,
@@ -30,10 +30,18 @@ export const placeOrder = async (req, res) => {
         } = req.body;
 
         // 1. Validate required fields (Basic validation)
-        if (!tradingsymbol || !symboltoken || !transactiontype || !exchange || !ordertype || !producttype || !quantity || !price) {
+        if (!tradingsymbol || !symboltoken || !transactiontype || !exchange || !ordertype || !producttype || !quantity) {
             return res.status(400).json({
                 success: false,
                 message: "Missing required order fields"
+            });
+        }
+
+        // Price can be 0 for MARKET orders
+        if (price === undefined || price === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing price field"
             });
         }
 
@@ -59,7 +67,7 @@ export const placeOrder = async (req, res) => {
             exchange,
             ordertype,
             producttype,
-            duration,
+
             price,
             quantity,
             squareoff,
@@ -67,13 +75,14 @@ export const placeOrder = async (req, res) => {
             trailingstoploss,
             triggerprice,
             tag,
-            status: 'PENDING'
+
         });
 
         await newOrder.save();
         logger.info(`Order created in DB: ${newOrder._id}`);
 
         // 3. Place Order via Angel One API
+        /*
         const orderParams = {
             variety: variety || "NORMAL",
             tradingsymbol,
@@ -82,7 +91,8 @@ export const placeOrder = async (req, res) => {
             exchange,
             ordertype,
             producttype,
-            duration: duration || "DAY",
+            duration: "DAY",
+
             price: price.toString(),
             quantity: quantity.toString(),
             squareoff: squareoff ? squareoff.toString() : "0",
@@ -90,26 +100,37 @@ export const placeOrder = async (req, res) => {
             trailingstoploss: trailingstoploss ? trailingstoploss.toString() : "0",
             triggerprice: triggerprice ? triggerprice.toString() : "0"
         };
+        */
 
-        // Ensure smartApi has the latest session (Token Check)
-        // If smartApi is stateless or needs refresh, we might need to handle it.
-        // Assuming smartApi singleton is maintained by the cron/controller.
+        // PAPER TRADING MODE: Simulate Success
+        logger.info('PAPER TRADING: Simulating Angel One Order Placement');
+        const mockResponse = {
+            status: true,
+            message: "SUCCESS",
+            data: {
+                orderid: "PAPER-" + Date.now(),
+                uniqueorderid: "UID-" + Date.now(),
+                script: tradingsymbol
+            }
+        };
 
         try {
-            const response = await smartApi.placeOrder(orderParams);
+            // const response = await smartApi.placeOrder(orderParams);
+            const response = mockResponse;
 
-            logger.info('Angel One Place Order Response:', response);
+            logger.info('Angel One Place Order Response (MOCKED):', response);
 
             if (response.status && response.data && response.data.orderid) {
                 // Success
                 newOrder.angelOrderId = response.data.orderid;
-                newOrder.status = 'OPEN'; // Or whatever initial status angel returns implies
+                newOrder.uniqueorderid = response.data.uniqueorderid; // Capture unique ID
                 newOrder.message = response.message;
+                newOrder.orderstatus = "complete"; // Simulate immediate completion
                 await newOrder.save();
 
                 return res.status(200).json({
                     success: true,
-                    message: "Order placed successfully",
+                    message: "Order placed successfully (Paper)",
                     data: {
                         orderId: newOrder._id,
                         angelOrderId: response.data.orderid,
@@ -118,7 +139,6 @@ export const placeOrder = async (req, res) => {
                 });
             } else {
                 // Failed at Angel One
-                newOrder.status = 'FAILED';
                 newOrder.message = response.message || "Unknown error from Angel One";
                 await newOrder.save();
 
@@ -131,7 +151,6 @@ export const placeOrder = async (req, res) => {
 
         } catch (apiError) {
             logger.error('Angel One API Error:', apiError);
-            newOrder.status = 'FAILED';
             newOrder.message = apiError.message;
             await newOrder.save();
 
