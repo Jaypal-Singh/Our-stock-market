@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Draggable from "react-draggable";
 import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
 
@@ -13,14 +13,27 @@ import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
  * - stockChange: number (Price change)
  * - stockChangePercent: number (Percentage change)
  * - onClose: function (Callback to close the window)
+ * - onSwitchToBuy: function (Callback to switch to Buy window)
  */
-const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange = -1.03, stockChangePercent = -1.35, onClose }) => {
+const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange = -1.03, stockChangePercent = -1.35, onClose, onSwitchToBuy }) => {
     const nodeRef = useRef(null);
     const [activeTab, setActiveTab] = useState("Regular");
     const [productType, setProductType] = useState("INT"); // INT or DEL
     const [qty, setQty] = useState(0);
     const [price, setPrice] = useState(stockPrice); // Default to market price
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
+
+    // Update price when stock changes
+    useEffect(() => {
+        setPrice(stockPrice);
+    }, [stockName]);
+
+    // Update price when live price changes (only in active Market mode)
+    useEffect(() => {
+        if (isMarket) {
+            setPrice(stockPrice);
+        }
+    }, [stockPrice, isMarket]);
 
     // Calculations (mock)
     const marginRequired = (qty * price).toFixed(2);
@@ -31,7 +44,7 @@ const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange =
             <div
                 ref={nodeRef}
                 className="fixed z-50 w-[500px] bg-slate-900 text-slate-200 rounded-lg shadow-2xl border border-slate-700 font-sans overflow-hidden"
-               style={{ top: "20%", left: "30%" }}// Initial Position (slightly offset from BuyWindow)
+                style={{ top: "20%", left: "30%" }}// Initial Position (slightly offset from BuyWindow)
             >
                 {/* Header Section */}
                 <div className="draggable-header cursor-move bg-red-900/40 p-3 border-b border-red-800/50 flex justify-between items-start">
@@ -52,17 +65,16 @@ const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange =
 
                     <div className="flex items-center gap-2">
                         <div className="flex bg-slate-800 rounded p-0.5">
-                            <button className="px-3 py-0.5 text-slate-400 text-xs font-bold hover:text-white transition-colors">B</button>
+                            <button onClick={onSwitchToBuy} className="px-3 py-0.5 text-slate-400 text-xs font-bold hover:text-white transition-colors">B</button>
                             <button className="px-3 py-0.5 bg-red-500 text-white text-xs font-bold rounded shadow-sm">S</button>
                         </div>
-                        <button className="p-1 hover:bg-slate-700 rounded text-slate-400"><Minus size={14} /></button>
                         <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><X size={16} /></button>
                     </div>
                 </div>
 
                 {/* Navigation Tabs */}
                 <div className="flex border-b border-slate-700 bg-slate-900">
-                    {["Regular", "Stop Loss", "GTT", "SIP"].map((tab) => (
+                    {["Regular"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}

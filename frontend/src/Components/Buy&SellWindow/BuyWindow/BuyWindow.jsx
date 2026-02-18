@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Draggable from "react-draggable";
 import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
 
@@ -13,14 +13,27 @@ import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
  * - stockChange: number (Price change)
  * - stockChangePercent: number (Percentage change)
  * - onClose: function (Callback to close the window)
+ * - onSwitchToSell: function (Callback to switch to Sell window)
  */
-const BuyWindow = ({ uid, stockName = "NTPC", stockPrice = 363.00, stockChange = -5.25, stockChangePercent = -1.43, onClose }) => {
+const BuyWindow = ({ uid, stockName = "NTPC", stockPrice = 363.00, stockChange = -5.25, stockChangePercent = -1.43, onClose, onSwitchToSell }) => {
     const nodeRef = React.useRef(null);
     const [activeTab, setActiveTab] = useState("Regular");
     const [productType, setProductType] = useState("INT"); // INT or DEL
     const [qty, setQty] = useState(0);
     const [price, setPrice] = useState(stockPrice); // Default to market price
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
+
+    // Update price when stock changes
+    useEffect(() => {
+        setPrice(stockPrice);
+    }, [stockName]);
+
+    // Update price when live price changes (only in active Market mode)
+    useEffect(() => {
+        if (isMarket) {
+            setPrice(stockPrice);
+        }
+    }, [stockPrice, isMarket]);
 
     // Calculations (mock)
     const marginRequired = (qty * price).toFixed(2);
@@ -53,16 +66,15 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockPrice = 363.00, stockChange =
                     <div className="flex items-center gap-2">
                         <div className="flex bg-slate-800 rounded p-0.5">
                             <button className="px-3 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded shadow-sm">B</button>
-                            <button className="px-3 py-0.5 text-slate-400 text-xs font-bold hover:text-white transition-colors">S</button>
+                            <button onClick={onSwitchToSell} className="px-3 py-0.5 text-slate-400 text-xs font-bold hover:text-white transition-colors">S</button>
                         </div>
-                        <button className="p-1 hover:bg-slate-700 rounded text-slate-400"><Minus size={14} /></button>
                         <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><X size={16} /></button>
                     </div>
                 </div>
 
                 {/* Navigation Tabs */}
                 <div className="flex border-b border-slate-700 bg-slate-900">
-                    {["Regular", "Stop Loss", "GTT", "SIP"].map((tab) => (
+                    {["Regular"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Minus, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -19,6 +19,18 @@ const MobileSellOrder = () => {
     const [quantity, setQuantity] = useState(1);
     const [price, setPrice] = useState(stock.price);
     const [orderType, setOrderType] = useState('Market');
+
+    // Update price when stock changes
+    useEffect(() => {
+        setPrice(stock.price);
+    }, [stock.name]);
+
+    // Update price when live price changes (only in active Market mode)
+    useEffect(() => {
+        if (orderType === 'Market') {
+            setPrice(stock.price);
+        }
+    }, [stock.price, orderType]);
 
     const handleQuantityChange = (increment) => {
         setQuantity(prev => Math.max(1, prev + increment));
@@ -61,8 +73,8 @@ const MobileSellOrder = () => {
                     <button
                         onClick={() => setProductType('Delivery')}
                         className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border rounded transition-colors ${productType === 'Delivery'
-                                ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
-                                : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
+                            ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
+                            : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
                             }`}
                     >
                         Delivery
@@ -70,8 +82,8 @@ const MobileSellOrder = () => {
                     <button
                         onClick={() => setProductType('Intraday')}
                         className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border rounded transition-colors ${productType === 'Intraday'
-                                ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
-                                : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
+                            ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
+                            : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
                             }`}
                     >
                         Intraday
@@ -134,8 +146,8 @@ const MobileSellOrder = () => {
                             <button
                                 onClick={() => { setOrderType('Market'); setPrice(stock.price); }} // Reset to Market/Current Price
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${orderType === 'Market'
-                                        ? 'bg-[#2a2e39] text-white shadow-sm'
-                                        : 'text-[#868993] hover:text-[#d1d4dc]'
+                                    ? 'bg-[#2a2e39] text-white shadow-sm'
+                                    : 'text-[#868993] hover:text-[#d1d4dc]'
                                     }`}
                             >
                                 Market
@@ -143,8 +155,8 @@ const MobileSellOrder = () => {
                             <button
                                 onClick={() => setOrderType('Limit')}
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${orderType === 'Limit'
-                                        ? 'bg-[#f23645] text-white shadow-sm'
-                                        : 'text-[#868993] hover:text-[#d1d4dc]'
+                                    ? 'bg-[#f23645] text-white shadow-sm'
+                                    : 'text-[#868993] hover:text-[#d1d4dc]'
                                     }`}
                             >
                                 Limit

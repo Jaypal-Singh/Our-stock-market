@@ -11,10 +11,17 @@ import SubscriptionManager from './services/websocket/SubscriptionManager.js';
 import DataStreamHandler from './services/websocket/DataStreamHandler.js';
 import { SUBSCRIPTION_MODES } from './constants/subscriptionModes.js';
 import watchlistRoute from './routes/watchlistRoutes.js'
+import orderRoutes from './routes/orderRoutes.js';
+import startAngelLoginCron from './cron/angelLoginCron.js';
+import fetchInstruments from './cron/fetchInstrumentsCron.js';
 import { createLogger } from './utils/logger.js';
 
 dotenv.config();
 connectDB();
+
+// Initialize Cron Jobs
+startAngelLoginCron();
+fetchInstruments();
 
 const logger = createLogger('Main');
 const app = express();
@@ -54,6 +61,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/angel', angelRoutes);
 app.use('/api/watchlist', watchlistRoute);
+app.use('/api/order', orderRoutes);
 
 
 
@@ -68,13 +76,13 @@ io.on('connection', (socket) => {
     // Handle subscription requests from frontend
     socket.on('subscribe_stocks', async (data) => {
         const { tokens, mode = SUBSCRIPTION_MODES.LTP } = data;
-        
+
         logger.info('Subscription request received:', {
             tokensCount: tokens?.length,
             mode,
             modeDescription: mode === 1 ? 'LTP (Fast)' : mode === 2 ? 'Quote (OHLC)' : 'Snap Quote'
         });
-        
+
         if (!tokens || !Array.isArray(tokens)) {
             socket.emit('subscription_error', { message: 'Invalid stocks data' });
             return;
@@ -84,26 +92,26 @@ io.on('connection', (socket) => {
         if (!wsManager.isConnected) {
             try {
                 logger.info('Angel One not connected, attempting to connect...');
-                
+
                 // Get credentials from angel controller/service
                 const { getSessionCredentials } = await import('./controllers/angelController.js');
                 const credentials = await getSessionCredentials();
-                
-                logger.debug('Got credentials:', { 
+
+                logger.debug('Got credentials:', {
                     hasJwtToken: !!credentials.jwtToken,
                     hasFeedToken: !!credentials.feedToken,
                     hasClientCode: !!credentials.clientCode,
                     hasApiKey: !!credentials.apiKey
                 });
-                
+
                 await wsManager.connect(credentials);
                 setupWebSocketListeners();
-                
+
                 logger.success('Angel One WebSocket connected successfully');
             } catch (error) {
                 logger.error('Failed to connect to Angel One:', error);
-                socket.emit('subscription_error', { 
-                    message: 'Failed to connect to market data: ' + error.message 
+                socket.emit('subscription_error', {
+                    message: 'Failed to connect to market data: ' + error.message
                 });
                 return;
             }
@@ -118,7 +126,7 @@ io.on('connection', (socket) => {
     socket.on('unsubscribe_stocks', (data) => {
         const { tokens } = data;
         logger.info('Unsubscribe request:', { tokensCount: tokens?.length });
-        
+
         const result = subManager.unsubscribeFromStocks(tokens);
         socket.emit('unsubscription_result', result);
     });
@@ -134,7 +142,7 @@ io.on('connection', (socket) => {
         const wsStatus = wsManager.getStatus();
         const subStatus = subManager.getSubscriptions();
         const streamStats = dataStreamHandler.getStats();
-        
+
         socket.emit('status', {
             webSocket: wsStatus,
             subscriptions: subStatus,
