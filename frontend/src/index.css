@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 .customscrollbar {
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .customscrollbar::-webkit-scrollbar-track {
@@ -10,10 +10,44 @@
 }
 
 .customscrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .customscrollbar::-webkit-scrollbar-thumb {
   background-color: #4f576b;
   border-radius: 10px;
+}
+
+.customscrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* Thin scrollbar for horizontal tabs */
+.customscrollbar-thin::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+}
+
+.customscrollbar-thin::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.customscrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #3b3f4a;
+  border-radius: 10px;
+}
+
+.customscrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #5a5f6b;
+}
+
+/* Hide scrollbar completely */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

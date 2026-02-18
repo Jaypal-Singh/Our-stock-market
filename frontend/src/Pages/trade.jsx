@@ -13,6 +13,7 @@ import MobileBuyOrder from "../Components/Mobile/MobileStockDetails/MobileOrder/
 import MobileSellOrder from "../Components/Mobile/MobileStockDetails/MobileOrder/MobileSellOrder";
 import OptionChainSection from "./Trade/TradeOne/OptionChainSection/OptionChainSection";
 import ChartSection from "./Trade/TradeOne/ChartsSection/ChartSection";
+import MobileStockManager from "../Components/Mobile/MobileWatchlist/MobileStockManager/MobileStockManager";
 
 function Trade() {
     const location = useLocation();
@@ -20,7 +21,8 @@ function Trade() {
         location.pathname.includes('buy-order') ||
         location.pathname.includes('sell-order') ||
         location.pathname.includes('option-chain') ||
-        location.pathname.includes('chart');
+        location.pathname.includes('chart') ||
+        location.pathname.includes('manage-stocks');
 
     return (
         <div className="h-screen flex flex-col bg-black">
@@ -52,6 +54,7 @@ function Trade() {
                         <Route path="sell-order" element={<MobileSellOrder />} />
                         <Route path="option-chain" element={<OptionChainSection />} />
                         <Route path="chart" element={<ChartSection />} />
+                        <Route path="manage-stocks" element={<MobileStockManager />} />
                         <Route path="*" element={<Navigate to="watchlist" replace />} />
                     </Routes>
                 </div>

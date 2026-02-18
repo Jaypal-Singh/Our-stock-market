@@ -13,7 +13,8 @@ const MobileHeader = ({
     onWatchlistChange,
     onAddWatchlist,
     forceSearchOpen,
-    onForceSearchOpenHandled
+    onForceSearchOpenHandled,
+    onTabContextMenu
 }) => {
     return (
         <div className="md:hidden bg-[#0b0e14] text-[#d1d4dc] pb-2 font-sans sticky top-0 z-50">
@@ -63,14 +64,15 @@ const MobileHeader = ({
             {/* Tabs */}
             {/* Tabs */}
             <div className="flex items-center justify-between text-sm font-medium mt-2 border-b border-[#2a2e39] pb-0 px-4">
-                <div className="flex overflow-x-auto no-scrollbar gap-6 flex-1 mask-linear-fade">
+                <div className="flex overflow-x-auto customscrollbar-thin gap-6 flex-1 mask-linear-fade">
                     {watchlists.map((list) => {
                         const isActive = activeWatchlist?._id === list._id;
                         return (
                             <div
                                 key={list._id}
                                 onClick={() => onWatchlistChange && onWatchlistChange(list)}
-                                className={`pb-2 px-1 cursor-pointer whitespace-nowrap transition-colors ${isActive
+                                onContextMenu={(e) => onTabContextMenu && onTabContextMenu(e, list)}
+                                className={`pb-2 px-1 cursor-pointer whitespace-nowrap transition-colors select-none ${isActive
                                     ? "text-[#2962ff] border-b-2 border-[#2962ff]"
                                     : "text-[#868993] hover:text-white border-b-2 border-transparent"
                                     }`}

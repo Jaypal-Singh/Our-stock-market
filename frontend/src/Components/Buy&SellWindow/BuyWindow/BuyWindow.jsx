@@ -1,19 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Draggable from "react-draggable";
 import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
+import { placeOrder } from "../../../services/angelOneService";
 
 /**
  * BuyWindow Component
  * A movable window for placing buy orders.
- * 
- * Props:
- * - uid: string (Unique ID for this window instance)
- * - stockName: string (Name of the stock, e.g., "NTPC")
- * - stockPrice: number (Current price)
- * - stockChange: number (Price change)
- * - stockChangePercent: number (Percentage change)
- * - onClose: function (Callback to close the window)
- * - onSwitchToSell: function (Callback to switch to Sell window)
  */
 const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, stockChange = -5.25, stockChangePercent = -1.43, onClose, onSwitchToSell }) => {
     const nodeRef = React.useRef(null);
@@ -22,6 +14,7 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, 
     const [qty, setQty] = useState(0);
     const [price, setPrice] = useState(stockPrice); // Default to market price
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
+    const [isLoading, setIsLoading] = useState(false);
 
     // Update price when stock changes
     useEffect(() => {
@@ -47,6 +40,8 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, 
                 return;
             }
 
+            setIsLoading(true);
+
             // Get User ID from localStorage
             const userInfo = localStorage.getItem("userInfo");
             const user = userInfo ? JSON.parse(userInfo) : null;
@@ -68,21 +63,20 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, 
 
             console.log("Placing Buy Order:", orderData);
 
-            // Import dynamically
-            const { placeOrder } = await import("../../../services/angelOneService");
-
             const response = await placeOrder(orderData);
 
             if (response.success) {
                 alert(`Buy Order Placed! ID: ${response.data.angelOrderId}`);
                 onClose();
             } else {
-                alert(`Order Failed: ${response.message}`);
+                alert(`Order Failed: ${response.message || 'Unknown error'}`);
             }
 
         } catch (error) {
             console.error("Order Execution Error:", error);
             alert("Failed to place order");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -237,8 +231,9 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 363.00, 
 
                     <button
                         onClick={handleBuy}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wide text-sm">
-                        Place Buy Order
+                        disabled={isLoading}
+                        className={`bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wide text-sm ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {isLoading ? 'Placing Order...' : 'Place Buy Order'}
                     </button>
                 </div>
 

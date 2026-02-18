@@ -86,10 +86,12 @@ const OrderSchema = new mongoose.Schema({
     },
     unfilledShares: {
         type: Number,
-        default: function() { return this.quantity; }
+        default: function () { return this.quantity; }
     },
-    orderstatus: { // Raw status text from Angel One (e.g., "complete", "rejected")
-        type: String
+    orderstatus: {
+        type: String,
+        enum: ['pending', 'open', 'complete', 'rejected', 'cancelled'],
+        default: 'pending'
     },
     uniqueorderid: {
         type: String

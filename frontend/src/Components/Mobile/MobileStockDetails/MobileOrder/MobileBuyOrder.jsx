@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Minus, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { placeOrder } from '../../../../services/angelOneService';
 
 const MobileBuyOrder = () => {
     const navigate = useNavigate();
@@ -12,13 +13,16 @@ const MobileBuyOrder = () => {
         price: "408.95",
         change: "-10.20",
         percent: "-2.43",
-        isUp: false
+        isUp: false,
+        token: "12345", // Dummy token if not passed
+        symbol: "COALINDIA"
     };
 
     const [productType, setProductType] = useState('Delivery');
     const [quantity, setQuantity] = useState(1);
     const [price, setPrice] = useState(stock.price);
     const [orderType, setOrderType] = useState('Market');
+    const [isLoading, setIsLoading] = useState(false);
 
     // Update price when stock changes
     useEffect(() => {
@@ -41,6 +45,53 @@ const MobileBuyOrder = () => {
             const newPrice = parseFloat(prev) + increment;
             return newPrice.toFixed(2);
         });
+    };
+
+    const handleBuy = async () => {
+        try {
+            if (quantity <= 0) {
+                alert("Please enter a valid quantity");
+                return;
+            }
+
+            setIsLoading(true);
+
+            // Get User ID from localStorage
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : "unknown_user";
+
+            const orderData = {
+                variety: "NORMAL",
+                tradingsymbol: stock.symbol || stock.name,
+                symboltoken: stock.token,
+                transactiontype: "BUY",
+                exchange: stock.exchange || "NSE",
+                ordertype: orderType === 'Market' ? "MARKET" : "LIMIT",
+                producttype: productType === "Intraday" ? "INTRADAY" : "DELIVERY",
+                duration: "DAY",
+                price: orderType === 'Market' ? 0 : price,
+                quantity: quantity,
+                userId: userId
+            };
+
+            const response = await placeOrder(orderData);
+
+            if (response.success) {
+                // alert(`Buy Order Placed! ID: ${response.data.angelOrderId}`);
+                // Navigate to Orders page with smart tab selection
+                const targetTab = orderType === 'Market' ? 'Order History' : 'Open Orders';
+                navigate('/trade/orders', { state: { activeTab: targetTab, refresh: Date.now() } });
+            } else {
+                alert(`Order Failed: ${response.message || 'Unknown error'}`);
+            }
+
+        } catch (error) {
+            console.error("Order Execution Error:", error);
+            alert("Failed to place order");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -176,8 +227,11 @@ const MobileBuyOrder = () => {
                     <span className="text-white text-sm">₹{(price * quantity).toFixed(2)} <span className="text-[#5c6bc0] text-xs">+ Charges</span></span>
                     <span className="text-white text-sm">₹0.00</span>
                 </div>
-                <button className="w-full bg-[#089981] hover:bg-[#067a67] text-white py-3.5 rounded text-sm font-bold uppercase tracking-wide transition-colors shadow-lg shadow-[#089981]/20">
-                    Buy
+                <button
+                    onClick={handleBuy}
+                    disabled={isLoading}
+                    className={`w-full bg-[#089981] hover:bg-[#067a67] text-white py-3.5 rounded text-sm font-bold uppercase tracking-wide transition-colors shadow-lg shadow-[#089981]/20 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {isLoading ? 'Placing Order...' : 'Buy'}
                 </button>
             </div>
         </div>

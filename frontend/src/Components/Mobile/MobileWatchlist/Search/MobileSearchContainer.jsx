@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { searchInstrumentsAPI } from "../../../../services/angelOneService";
 import MobileSearchInput from "./MobileSearchInput";
 import MobileSearchResultsList from "./MobileSearchResultsList";
-import { Search } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 
 const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, forceOpen, onForceOpenHandled }) => {
     const [query, setQuery] = useState("");
@@ -83,16 +83,20 @@ const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, force
 
     return (
         <>
-            {/* Initial Search Trigger (Visible when not focused) */}
+            {/* Header with Watchlist Options & Search Icon */}
             {!isFocused && (
-                <div
-                    className="p-4 mt-1"
-                    onClick={() => setIsFocused(true)}
-                >
-                    <div className="bg-[#1e222d] rounded px-3 py-2 flex items-center border border-[#2a2e39] text-[#868993]">
-                        <Search size={16} className="mr-2" />
-                        <span className="text-sm font-medium">Search & add</span>
-                        <span className="ml-auto text-xs border border-[#565961] rounded px-1.5 py-0.5">/</span>
+                <div className="flex items-center justify-between px-4 py-3 bg-[#0b0e14]">
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-bold text-[#e1e4e8]">Watchlist</span>
+                        <span className="text-xl font-medium text-[#868993]">Options</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            className="w-10 h-10 rounded-full bg-[#1e222d] flex items-center justify-center text-[#d1d4dc] border border-[#2a2e39]"
+                            onClick={() => setIsFocused(true)}
+                        >
+                            <Search size={20} />
+                        </button>
                     </div>
                 </div>
             )}
