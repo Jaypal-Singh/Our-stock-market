@@ -1,9 +1,10 @@
 import express from 'express';
 import { 
-    loginAngelOne, 
-    getStoredTokens,
     getMarketStatus,
-    getStockQuotes
+    getStockQuotes,
+    searchInstruments,
+    loginAngelOne,
+    getStoredTokens
 } from '../controllers/angelController.js';
 
 const router = express.Router();
@@ -19,6 +20,9 @@ router.get('/market-status', getMarketStatus);
 
 // Get stock quotes (REST API fallback)
 router.post('/quotes', getStockQuotes);
+
+// Search instruments
+router.get('/search', searchInstruments);
 
 export default router;
 

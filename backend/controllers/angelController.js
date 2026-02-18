@@ -1,6 +1,7 @@
 import { smartApi } from '../config/angelConfig.js';
 import { createRequire } from 'module';
 import AngelOneCredential from '../models/AngelOneCredential.js';
+import Instrument from '../models/Instrument.js';
 
 const require = createRequire(import.meta.url);
 
@@ -316,6 +317,48 @@ export const getStockQuotes = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch quotes',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Search instruments by name or symbol
+ * GET /api/angel/search
+ */
+export const searchInstruments = async (req, res) => {
+    try {
+        const { query } = req.query;
+        
+        if (!query || query.length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'Query must be at least 2 characters'
+            });
+        }
+
+        // Case insensitive search
+        const regex = new RegExp(query, 'i');
+        
+        const instruments = await Instrument.find({
+            $or: [
+                { name: regex },
+                { symbol: regex }
+            ]
+        })
+        .select('name symbol token exch_seg instrumenttype')
+        .limit(20);
+
+        res.json({
+            success: true,
+            data: instruments
+        });
+
+    } catch (error) {
+        console.error('Search Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Search failed',
             error: error.message
         });
     }
