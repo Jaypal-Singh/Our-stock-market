@@ -15,7 +15,7 @@ import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
  * - onClose: function (Callback to close the window)
  * - onSwitchToBuy: function (Callback to switch to Buy window)
  */
-const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange = -1.03, stockChangePercent = -1.35, onClose, onSwitchToBuy }) => {
+const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 75.47, stockChange = -1.03, stockChangePercent = -1.35, onClose, onSwitchToBuy }) => {
     const nodeRef = useRef(null);
     const [activeTab, setActiveTab] = useState("Regular");
     const [productType, setProductType] = useState("INT"); // INT or DEL
@@ -38,6 +38,55 @@ const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange =
     // Calculations (mock)
     const marginRequired = (qty * price).toFixed(2);
     const charges = 0; // consistent with screenshot
+
+    // Handle Sell Order
+    // const { user } = useUser(); // Removed as per instruction
+
+    const handleSell = async () => {
+        try {
+            if (qty <= 0) {
+                alert("Please enter a valid quantity");
+                return;
+            }
+
+            // Get User ID from localStorage
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : "unknown_user";
+
+            const orderData = {
+                variety: "NORMAL",
+                tradingsymbol: stockSymbol || stockName + "-EQ", // Use passed symbol or fallback
+                symboltoken: uid,
+                transactiontype: "SELL",
+                exchange: "NSE", // Defaulting to NSE
+                ordertype: isMarket ? "MARKET" : "LIMIT",
+                producttype: productType === "INT" ? "INTRADAY" : "DELIVERY",
+                duration: "DAY",
+                price: isMarket ? 0 : price,
+                quantity: qty,
+                userId: userId
+            };
+
+            console.log("Placing Sell Order:", orderData);
+
+            // Import dynamically
+            const { placeOrder } = await import("../../../services/angelOneService");
+
+            const response = await placeOrder(orderData);
+
+            if (response.success) {
+                alert(`Sell Order Placed! ID: ${response.data.angelOrderId}`);
+                onClose();
+            } else {
+                alert(`Order Failed: ${response.message}`);
+            }
+
+        } catch (error) {
+            console.error("Order Execution Error:", error);
+            alert("Failed to place order");
+        }
+    };
 
     return (
         <Draggable nodeRef={nodeRef} handle=".draggable-header">
@@ -188,7 +237,10 @@ const SellWindow = ({ uid, stockName = "NHPC", stockPrice = 75.47, stockChange =
                         </div>
                     </div>
 
-                    <button className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wide text-sm">
+                    <button
+                        onClick={handleSell}
+                        className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wide text-sm"
+                    >
                         Place Sell Order
                     </button>
                 </div>

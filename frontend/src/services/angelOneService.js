@@ -264,3 +264,25 @@ export const searchInstrumentsAPI = async (query) => {
     }
 };
 
+/**
+ * Place an order
+ * @param {object} orderDetails
+ * @returns {Promise<object>}
+ */
+export const placeOrder = async (orderDetails) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/order/placeOrder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderDetails)
+        });
+
+        const data = await response.json();
+        return data;
+
+    } catch (error) {
+        console.error('Place Order Error:', error);
+        return { success: false, message: error.message };
+    }
+};
+
