@@ -27,9 +27,10 @@ const useAngelOneSocket = () => {
                 
                 console.log('📊 Market Status:', status);
                 
-                // If market is closed, fetch REST data as fallback
-                if (status && !status.isOpen && !hasLoadedRestData.current) {
-                    console.log('🔄 Market closed - fetching data via REST API');
+                // Always fetch initial data via REST to get 'Previous Close' and populate UI immediately
+                // This ensures we have a baseline for percentage calculations even before the first socket tick
+                if (status && !hasLoadedRestData.current) {
+                    console.log('🚀 Fetching initial stock data via REST API...');
                     
                     const stocksToFetch = initialStocks.filter(s => s.token);
                     const quotes = await fetchStockQuotes(stocksToFetch);
@@ -66,7 +67,7 @@ const useAngelOneSocket = () => {
                         });
                         
                         hasLoadedRestData.current = true;
-                        console.log(`✅ Loaded ${quotes.length} stock prices via REST API`);
+                        console.log(`✅ Loaded ${quotes.length} initial stock prices via REST API`);
                     }
                 }
                 
@@ -181,12 +182,61 @@ const useAngelOneSocket = () => {
         };
     }, []);
 
+    // Function to add a new stock to the watchlist
+    const addStock = async (newStock) => {
+        // Check if stock already exists
+        if (stocks.find(s => s.token === newStock.token)) {
+            console.log('Stock already in watchlist:', newStock.name);
+            return;
+        }
+
+        console.log('➕ Adding stock to watchlist:', newStock.name);
+        
+        // Add to local state immediately
+        setStocks(prev => [...prev, newStock]);
+
+        // If market is closed, try to fetch REST data for this stock
+        if (marketStatus && !marketStatus.isOpen) {
+            console.log('Market closed, fetching REST data for new stock...');
+            const quotes = await fetchStockQuotes([newStock]);
+            
+            if (quotes && quotes.length > 0) {
+                const quote = quotes[0];
+                const change = quote.ltp - quote.close;
+                const changePercent = quote.close > 0 ? (change / quote.close) * 100 : 0;
+                
+                const updatedStock = {
+                    ...newStock,
+                    ltp: quote.ltp,
+                    price: quote.ltp,
+                    change,
+                    changePercent: parseFloat(changePercent.toFixed(2)),
+                    percent: `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+                    isUp: change >= 0,
+                    dataSource: 'REST'
+                };
+                
+                // Update state with fetched data
+                setStocks(prev => prev.map(s => s.token === newStock.token ? updatedStock : s));
+            }
+        } 
+        // If market is open and socket connected, subscribe
+        else if (isConnected && socketRef.current) {
+            console.log('🔌 Subscribing to new stock via WebSocket...');
+            socketRef.current.emit('subscribe_stocks', { 
+                tokens: [newStock],
+                mode: 1 
+            });
+        }
+    };
+
     return {
         stocks,
         isConnected,
         error,
         marketStatus,
-        isLoading
+        isLoading,
+        addStock
     };
 };
 
