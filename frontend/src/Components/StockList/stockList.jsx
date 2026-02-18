@@ -109,7 +109,7 @@ function StockList() {
                 const liveData = await fetchStockQuotes(instruments);
 
                 // Merge live data into instruments
-                const merged = instruments.map(inst => {
+                mergedStocks = instruments.map(inst => {
                     const live = liveData.find(l => l.token === inst.token);
                     if (live) {
                         return {
@@ -127,11 +127,20 @@ function StockList() {
                     }
                     return inst;
                 });
-                setActiveStocks(merged);
+                setActiveStocks(mergedStocks);
             } catch (quoteErr) {
                 console.error("Error fetching live quotes, showing static data", quoteErr);
                 setActiveStocks(instruments);
             }
+
+            // --- Auto Select First Stock Logic ---
+            if (mergedStocks.length > 0) {
+                // Check if we already have a stock in state to avoid loop
+                if (!location.state?.stock) {
+                    navigate('/trade/watchlist', { state: { stock: mergedStocks[0] }, replace: true });
+                }
+            }
+
         } catch (error) {
             console.error("Error fetching stocks", error);
         }
