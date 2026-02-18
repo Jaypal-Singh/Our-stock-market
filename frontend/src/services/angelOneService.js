@@ -243,3 +243,24 @@ export const fetchStockQuotes = async (tokens) => {
     }
 };
 
+/**
+ * Search instruments by name or symbol
+ * @param {string} query
+ * @returns {Promise<array>}
+ */
+export const searchInstrumentsAPI = async (query) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/angel/search?query=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        return data.success ? data.data : [];
+
+    } catch (error) {
+        console.error('Search API Error:', error);
+        return [];
+    }
+};
+

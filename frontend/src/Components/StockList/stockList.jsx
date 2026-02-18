@@ -1,5 +1,5 @@
 import Tooltips from "./tooltips";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     Settings,
     X,
@@ -12,14 +12,20 @@ import {
 import useAngelOneSocket from "../../Hooks/useAngelOneSocket";
 import BuyWindow from "../Buy&SellWindow/BuyWindow/BuyWindow";
 import SellWindow from "../Buy&SellWindow/SellWindow/SellWindow";
+import SearchContainer from "./Search/SearchContainer";
+import StockDetailsOverlay from "./StockDetailsOverlay";
 
 function StockList() {
     // Use the hook to get real-time stock data
-    const { stocks, isConnected, error } = useAngelOneSocket();
+    const { stocks, isConnected, error, addStock } = useAngelOneSocket();
     const [hoveredIndex, setHoveredIndex] = useState(null);
     const [selectedStock, setSelectedStock] = useState(null);
     const [showBuyWindow, setShowBuyWindow] = useState(false);
     const [showSellWindow, setShowSellWindow] = useState(false);
+
+    // New Detail Window State
+    const [showDetailsWindow, setShowDetailsWindow] = useState(false);
+    const [selectedDetailStock, setSelectedDetailStock] = useState(null);
 
     const handleBuyClick = (stock) => {
         setSelectedStock(stock);
@@ -31,6 +37,25 @@ function StockList() {
         setSelectedStock(stock);
         setShowSellWindow(true);
         setShowBuyWindow(false);
+    };
+
+    const handleStockSelect = (stock) => {
+        setSelectedDetailStock(stock);
+        setShowDetailsWindow(true);
+    };
+
+    const handleStockBuyFromDetails = (stock) => {
+        setSelectedStock(stock);
+        setShowBuyWindow(true);
+        setShowSellWindow(false);
+        setShowDetailsWindow(false);
+    };
+
+    const handleStockSellFromDetails = (stock) => {
+        setSelectedStock(stock);
+        setShowSellWindow(true);
+        setShowBuyWindow(false);
+        setShowDetailsWindow(false);
     };
 
     const parsePrice = (priceStr) => {
@@ -55,6 +80,7 @@ function StockList() {
                     stockChange={parseFloat(selectedStock.change)}
                     stockChangePercent={parsePercent(selectedStock.percent)}
                     onClose={() => setShowBuyWindow(false)}
+                    onSwitchToSell={()=>handleSellClick(selectedStock)}
                 />
             )}
             {showSellWindow && selectedStock && (
@@ -65,6 +91,18 @@ function StockList() {
                     stockChange={parseFloat(selectedStock.change)}
                     stockChangePercent={parsePercent(selectedStock.percent)}
                     onClose={() => setShowSellWindow(false)}
+                    onSwitchToBuy={()=>handleSellClick(selectedStock)}
+
+                />
+            )}
+
+            {/* Stock Details Overlay */}
+            {showDetailsWindow && selectedDetailStock && (
+                <StockDetailsOverlay
+                    stock={selectedDetailStock}
+                    onClose={() => setShowDetailsWindow(false)}
+                    onBuy={handleStockBuyFromDetails}
+                    onSell={handleStockSellFromDetails}
                 />
             )}
 
@@ -103,18 +141,12 @@ function StockList() {
                     </span>
                 </div>
 
-                {/* Search */}
-                <div className="p-3">
-                    <div className="flex items-center bg-[#2a2e39] rounded px-3 py-1.5">
-                        <Search size={16} className="text-[#868993] mr-2" />
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            className="bg-transparent border-none outline-none text-sm w-full"
-                        />
-                        <Filter size={16} className="text-[#868993]" />
-                    </div>
-                </div>
+                <SearchContainer
+                    onAddStock={addStock}
+                    onSelectStock={handleStockSelect}
+                    onBuy={handleBuyClick}
+                    onSell={handleSellClick}
+                />
             </div>
 
             {/* 2. Scrollable List Area (Ye portion scroll hoga) */}
