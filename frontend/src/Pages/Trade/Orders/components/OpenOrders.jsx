@@ -2,38 +2,9 @@
 import React from 'react';
 import { Edit2, XCircle } from 'lucide-react';
 
-const OpenOrders = ({ orders = [] }) => {
-    // Dummy Data for visualization if no props passed (or just to override empty state for dev)
-    const dummyOrders = [
-        {
-            time: "10:23:45",
-            type: "BUY",
-            instrument: "RELIANCE",
-            exchange: "NSE",
-            product: "Delivery",
-            qty: "10",
-            price: "2450.00",
-            ltp: "2448.50",
-            status: "Open",
-            statusColor: "text-blue-400"
-        },
-        {
-            time: "11:15:00",
-            type: "SELL",
-            instrument: "TCS",
-            exchange: "BSE",
-            product: "Intraday",
-            qty: "5",
-            price: "3200.50",
-            ltp: "3198.00",
-            status: "Pending",
-            statusColor: "text-yellow-400"
-        },
-    ];
+const OpenOrders = ({ orders = [], onUpdate }) => {
 
-    const displayOrders = orders.length > 0 ? orders : dummyOrders;
-
-    if (displayOrders.length === 0) {
+    if (orders.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
                 <div className="bg-[#1e2330] p-6 rounded-full mb-6">
@@ -59,6 +30,69 @@ const OpenOrders = ({ orders = [] }) => {
         );
     }
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    const handleCancel = async (orderId) => {
+        if (!window.confirm("Are you sure you want to cancel this order?")) return;
+
+        try {
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : null;
+
+            const response = await fetch(`${API_URL}/api/order/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, userId })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert("Order Cancelled");
+                if (onUpdate) onUpdate();
+            } else {
+                alert(data.message || "Failed to cancel order");
+            }
+        } catch (error) {
+            console.error("Cancel Error:", error);
+            alert("Network error");
+        }
+    };
+
+    const handleModify = async (order) => {
+        const newPrice = window.prompt("Enter new price:", order.price);
+        if (newPrice === null) return; // Cancelled
+
+        const newQty = window.prompt("Enter new quantity:", order.qty.split('/')[1]); // Extract total qty
+        if (newQty === null) return;
+
+        try {
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : null;
+
+            const response = await fetch(`${API_URL}/api/order/modify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: order.originalOrder._id,
+                    userId,
+                    price: parseFloat(newPrice),
+                    quantity: parseInt(newQty)
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert("Order Modified");
+                if (onUpdate) onUpdate();
+            } else {
+                alert(data.message || "Failed to modify order");
+            }
+        } catch (error) {
+            console.error("Modify Error:", error);
+            alert("Network error");
+        }
+    };
+
     return (
         <div className="bg-[#1e2330] rounded-lg border border-[#2a2e39] overflow-hidden">
             {/* Desktop Table View */}
@@ -78,7 +112,7 @@ const OpenOrders = ({ orders = [] }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {displayOrders.map((order, index) => (
+                        {orders.map((order, index) => (
                             <tr key={index} className="hover:bg-[#2a2e39] transition-colors cursor-pointer border-b border-[#2a2e39] last:border-0 group">
                                 <td className="py-4 pl-4 text-[#d1d4dc] text-xs font-medium">{order.time}</td>
                                 <td className="py-4">
@@ -107,11 +141,19 @@ const OpenOrders = ({ orders = [] }) => {
                                     </div>
                                 </td>
                                 <td className="py-4 text-right pr-4">
-                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="p-1.5 hover:bg-[#3e4455] rounded text-blue-400 custom-tooltip" title="Modify Order">
+                                    <div className="flex items-center justify-end gap-2"> {/* REMOVED OPACITY CLASSES */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleModify(order); }}
+                                            className="p-1.5 hover:bg-[#3e4455] rounded text-blue-400 custom-tooltip"
+                                            title="Modify Order"
+                                        >
                                             <Edit2 size={14} />
                                         </button>
-                                        <button className="p-1.5 hover:bg-[#3e4455] rounded text-red-400 custom-tooltip" title="Cancel Order">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleCancel(order.originalOrder._id); }}
+                                            className="p-1.5 hover:bg-[#3e4455] rounded text-red-400 custom-tooltip"
+                                            title="Cancel Order"
+                                        >
                                             <XCircle size={14} />
                                         </button>
                                     </div>
@@ -124,7 +166,7 @@ const OpenOrders = ({ orders = [] }) => {
 
             {/* Mobile Card View */}
             <div className="md:hidden">
-                {displayOrders.map((order, index) => (
+                {orders.map((order, index) => (
                     <div key={index} className="p-4 border-b border-[#2a2e39] last:border-0 bg-[#0b0e14]">
                         <div className="flex justify-between items-start mb-2">
                             <div className="flex gap-2 items-center">
@@ -163,10 +205,16 @@ const OpenOrders = ({ orders = [] }) => {
 
                         {/* Action Buttons for Mobile */}
                         <div className="flex gap-2">
-                            <button className="flex-1 bg-[#2a2e39] text-blue-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleModify(order); }}
+                                className="flex-1 bg-[#2a2e39] text-blue-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2"
+                            >
                                 <Edit2 size={12} /> Modify
                             </button>
-                            <button className="flex-1 bg-[#2a2e39] text-red-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleCancel(order.originalOrder._id); }}
+                                className="flex-1 bg-[#2a2e39] text-red-400 py-2 rounded text-xs font-bold border border-[#3e4455] flex items-center justify-center gap-2"
+                            >
                                 <XCircle size={12} /> Cancel
                             </button>
                         </div>

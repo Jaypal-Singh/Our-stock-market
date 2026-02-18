@@ -4,6 +4,8 @@ import MobileHeader from './MobileHeader';
 import MobileWatchlist from './MobileWatchlist';
 import useAngelOneSocket from '../../../Hooks/useAngelOneSocket';
 import CreateWatchlistModal from '../../Common/CreateWatchlistModal';
+import WatchlistContextMenu from '../../Common/WatchlistContextMenu';
+import RenameWatchlistModal from '../../Common/RenameWatchlistModal';
 import axios from 'axios';
 
 const MobileWatchlistPage = () => {
@@ -11,9 +13,18 @@ const MobileWatchlistPage = () => {
     const { isConnected, error, addStock: socketAddStock } = useAngelOneSocket() || {}; // Use hook for socket/connection status
 
     const [watchlists, setWatchlists] = useState([]);
-    const [activeWatchlist, setActiveWatchlist] = useState(null);
+    const [activeWatchlist, setActiveWatchlistState] = useState(null);
     const [activeStocks, setActiveStocks] = useState([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Wrap setActiveWatchlist to also persist in localStorage
+    const setActiveWatchlist = (wl) => {
+        setActiveWatchlistState(wl);
+        if (wl?._id) {
+            localStorage.setItem('activeWatchlistId', wl._id);
+        }
+    };
 
     // Helper: get auth config from stored userInfo
     const getAuthConfig = () => {
@@ -36,7 +47,10 @@ const MobileWatchlistPage = () => {
             const res = await axios.get('http://localhost:5000/api/watchlist/getAllWatchlists', config);
             setWatchlists(res.data);
             if (res.data.length > 0 && !activeWatchlist) {
-                setActiveWatchlist(res.data[0]);
+                // Restore previously active watchlist from localStorage
+                const savedId = localStorage.getItem('activeWatchlistId');
+                const saved = savedId && res.data.find(w => w._id === savedId);
+                setActiveWatchlist(saved || res.data[0]);
             }
         } catch (error) {
             console.error("Error fetching watchlists", error);
@@ -54,6 +68,7 @@ const MobileWatchlistPage = () => {
     }, [activeWatchlist]);
 
     const fetchWatchlistStocks = async (name) => {
+        setIsLoading(true);
         try {
             const config = getAuthConfig();
             if (!config) return;
@@ -96,6 +111,8 @@ const MobileWatchlistPage = () => {
             }
         } catch (error) {
             console.error("Error fetching stocks", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -149,6 +166,44 @@ const MobileWatchlistPage = () => {
 
     const [forceSearchOpen, setForceSearchOpen] = useState(false);
 
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState(null);
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [renameTarget, setRenameTarget] = useState(null);
+
+    const handleTabContextMenu = (e, list) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX || e.touches?.[0]?.clientX || 100, y: e.clientY || e.touches?.[0]?.clientY || 100, watchlist: list });
+    };
+
+    const handleDeleteWatchlist = async (watchlist) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            await axios.delete(`http://localhost:5000/api/watchlist/deleteWatchlist/${watchlist._id}`, config);
+            await fetchWatchlists();
+            if (activeWatchlist?._id === watchlist._id) {
+                setActiveWatchlist(null);
+            }
+        } catch (error) {
+            console.error("Error deleting watchlist", error);
+        }
+    };
+
+    const handleRenameWatchlist = async (newName) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const res = await axios.put(`http://localhost:5000/api/watchlist/renameWatchlist/${renameTarget._id}`, { name: newName }, config);
+            await fetchWatchlists();
+            if (activeWatchlist?._id === renameTarget._id) {
+                setActiveWatchlist(res.data);
+            }
+        } catch (error) {
+            console.error("Error renaming watchlist", error);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#0b0e14]">
             <CreateWatchlistModal
@@ -169,18 +224,59 @@ const MobileWatchlistPage = () => {
                     onAddWatchlist={() => setIsCreateModalOpen(true)}
                     forceSearchOpen={forceSearchOpen}
                     onForceSearchOpenHandled={() => setForceSearchOpen(false)}
+                    onTabContextMenu={handleTabContextMenu}
                 />
             </div>
 
             {/* List - Scrollable */}
             <div className="flex-1 overflow-y-auto customscrollbar pb-20">
-                <MobileWatchlist
-                    stocks={activeStocks}
-                    isConnected={isConnected}
-                    error={error}
-                    onAddClick={() => setForceSearchOpen(true)}
-                />
+                {isLoading ? (
+                    <div className="px-0">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                            <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-[#2a2e39]">
+                                <div className="flex flex-col gap-2">
+                                    <div className="h-3.5 w-28 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                    <div className="h-3.5 w-16 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <MobileWatchlist
+                        stocks={activeStocks}
+                        isConnected={isConnected}
+                        error={error}
+                        onAddClick={() => setForceSearchOpen(true)}
+                        watchlistName={activeWatchlist?.name || ''}
+                    />
+                )}
             </div>
+
+            {/* Context Menu */}
+            {contextMenu && (
+                <WatchlistContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onRename={() => {
+                        setRenameTarget(contextMenu.watchlist);
+                        setIsRenameModalOpen(true);
+                    }}
+                    onDelete={() => handleDeleteWatchlist(contextMenu.watchlist)}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {/* Rename Modal */}
+            <RenameWatchlistModal
+                isOpen={isRenameModalOpen}
+                onClose={() => { setIsRenameModalOpen(false); setRenameTarget(null); }}
+                onRename={handleRenameWatchlist}
+                currentName={renameTarget?.name || ''}
+            />
         </div>
     );
 };
