@@ -14,6 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import TradingViewChart from "../../../../Components/Chart/TradingViewChart";
 
 function ChartSection() {
   const navigate = useNavigate();
@@ -21,12 +22,47 @@ function ChartSection() {
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes('/trade/chart');
 
+  const [interval, setInterval] = React.useState('FIVE_MINUTE');
+  const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
+
+  const intervals = [
+    { label: '1m', value: 'ONE_MINUTE' },
+    { label: '5m', value: 'FIVE_MINUTE' },
+    { label: '15m', value: 'FIFTEEN_MINUTE' },
+    { label: '30m', value: 'THIRTY_MINUTE' },
+    { label: '1h', value: 'ONE_HOUR' },
+    { label: '1d', value: 'ONE_DAY' },
+  ];
+
+  const currentIntervalLabel = intervals.find(i => i.value === interval)?.label || '5m';
+
+  const [hoveredCandle, setHoveredCandle] = React.useState(null);
+
+  // Display data: Hovered candle OR current stock live data
+  const displayOpen = hoveredCandle ? hoveredCandle.open : (stock?.open || 0);
+  const displayHigh = hoveredCandle ? hoveredCandle.high : (stock?.high || 0);
+  const displayLow = hoveredCandle ? hoveredCandle.low : (stock?.low || 0);
+  const displayClose = hoveredCandle ? hoveredCandle.close : (stock?.close || stock?.ltp || 0);
+
+  const isHoverUp = hoveredCandle ? (hoveredCandle.close >= hoveredCandle.open) : stock?.isUp;
+  const textColor = isHoverUp ? "text-[#089981]" : "text-[#f23645]";
+
+  const handleCrosshairMove = React.useCallback((data) => {
+    setHoveredCandle(prev => {
+      // optimizaton: if data is null and prev is null, do nothing
+      if (!data && !prev) return prev;
+      // optimization: if data and prev exist and times match, do nothing (avoid re-render)
+      if (data && prev && data.time === prev.time) return prev;
+      return data;
+    });
+  }, []);
+
   return (
     <div className="flex flex-col h-full bg-[#131722] text-[#d1d4dc]">
 
       {/* Mobile Header */}
       {isMobileView && (
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#1c202b] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#0b0e14] shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="text-[#d1d4dc]">
               <ArrowLeft size={24} />
@@ -43,7 +79,31 @@ function ChartSection() {
               )}
             </div>
           </div>
-          {/* Optional: Add chart settings or timeframe button here for mobile */}
+          {/* Mobile Interval Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowIntervalMenu(!showIntervalMenu)}
+              className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-[#2a2e39] rounded"
+            >
+              {currentIntervalLabel} <ChevronDown size={12} />
+            </button>
+            {showIntervalMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-[#1c202b] border border-[#2a2e39] rounded shadow-xl z-50 py-1 min-w-[80px]">
+                {intervals.map(opt => (
+                  <div
+                    key={opt.value}
+                    className={`px-3 py-2 text-xs cursor-pointer hover:bg-[#2a2e39] ${interval === opt.value ? 'text-[#2962ff]' : 'text-[#d1d4dc]'}`}
+                    onClick={() => {
+                      setInterval(opt.value);
+                      setShowIntervalMenu(false);
+                    }}
+                  >
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -51,9 +111,32 @@ function ChartSection() {
       {!isMobileView && (
         <div className="flex items-center justify-between p-1 border-b border-[#2a2e39] bg-[#1c202b]">
           <div className="flex items-center gap-3 px-2">
-            <span className="text-xs font-bold border-r border-[#2a2e39] pr-3">
-              5m
-            </span>
+            {/* Desktop Interval Selector */}
+            <div className="relative">
+              <div
+                className="flex items-center gap-1 text-xs font-bold border-r border-[#2a2e39] pr-3 cursor-pointer hover:text-white"
+                onClick={() => setShowIntervalMenu(!showIntervalMenu)}
+              >
+                {currentIntervalLabel} <ChevronDown size={10} />
+              </div>
+              {showIntervalMenu && (
+                <div className="absolute left-0 top-full mt-2 bg-[#1c202b] border border-[#2a2e39] rounded shadow-xl z-50 py-1 min-w-[80px]">
+                  {intervals.map(opt => (
+                    <div
+                      key={opt.value}
+                      className={`px-4 py-2 text-xs cursor-pointer hover:bg-[#2a2e39] ${interval === opt.value ? 'text-[#2962ff]' : ''}`}
+                      onClick={() => {
+                        setInterval(opt.value);
+                        setShowIntervalMenu(false);
+                      }}
+                    >
+                      {opt.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-4 items-center text-[#868993]">
               <span className="flex items-center gap-1 text-[11px] hover:text-white cursor-pointer">
                 Indicators
@@ -85,56 +168,66 @@ function ChartSection() {
         </div>
       )}
 
-      {/* Price Info Bar */}
-      {!isMobileView && (
+
+
+      {!isMobileView && stock && (
         <div className="flex items-center p-2 text-[12px] border-b border-[#2a2e39]">
-          <span className="font-bold text-white mr-2">LXCHEM • 5 • NSE</span>
+          <span className="font-bold text-white mr-2 uppercase">
+            {stock.name} • {stock.exch_seg || stock.exchange}
+          </span>
           <div className="flex gap-2">
             <span className="text-[#868993]">
-              O<span className="text-[#089981]">150.39</span>
+              O<span className={textColor}>{displayOpen}</span>
             </span>
             <span className="text-[#868993]">
-              H<span className="text-[#089981]">150.85</span>
+              H<span className={textColor}>{displayHigh}</span>
             </span>
             <span className="text-[#868993]">
-              L<span className="text-[#f23645]">150.00</span>
+              L<span className={textColor}>{displayLow}</span>
             </span>
             <span className="text-[#868993]">
-              C<span className="text-[#089981]">150.61</span>
+              C<span className={textColor}>{displayClose}</span>
             </span>
-            <span className="text-[#089981] font-bold">+0.30 (+0.20%)</span>
+            {!hoveredCandle && (
+              <span className={`${stock.isUp ? "text-[#089981]" : "text-[#f23645]"} font-bold`}>
+                {stock.change > 0 ? "+" : ""}{stock.change} ({stock.changePercent}%)
+              </span>
+            )}
+            {hoveredCandle && (
+              <span className={`${textColor} font-bold`}>
+                {/* Optional: Show candle change? For now just OHLC is requested. */}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {/* Main Chart Area */}
       <div className="relative flex-1 bg-[#131722] overflow-hidden">
+        {stock ? (
+          <TradingViewChart
+            stock={stock}
+            interval={interval}
+            onCrosshairMove={handleCrosshairMove}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-gray-500">
+            Select a stock to view chart
+          </div>
+        )}
+
         {/* Buy/Sell Floating Buttons */}
-        <div className="absolute top-4 left-4 flex items-center z-10 shadow-lg">
-          <div className="bg-[#089981] text-white px-3 py-1.5 rounded-l text-[11px] font-bold cursor-pointer hover:opacity-90">
-            BUY @ {stock?.price || "149.96"}
+        <div className="absolute top-4 left-4 flex items-center z-10 shadow-lg pointer-events-none">
+          {/* Use pointer-events-auto on buttons to allow clicking over the chart */}
+          <div className="bg-[#089981] text-white px-3 py-1.5 rounded-l text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
+            BUY @ {stock?.price || "0.00"}
           </div>
           <div className="bg-[#2a2e39] text-white border-x border-black/20 px-2 py-1.5 text-[11px]">
             1
           </div>
-          <div className="bg-[#f23645] text-white px-3 py-1.5 rounded-r text-[11px] font-bold cursor-pointer hover:opacity-90">
-            SELL @ {stock?.price || "149.96"}
+          <div className="bg-[#f23645] text-white px-3 py-1.5 rounded-r text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
+            SELL @ {stock?.price || "0.00"}
           </div>
-        </div>
-
-        {/* Chart Background Grid (Simulation) */}
-        <div
-          className="w-full h-full opacity-10"
-          style={{
-            backgroundImage:
-              "linear-gradient(#2a2e39 1px, transparent 1px), linear-gradient(90deg, #2a2e39 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        ></div>
-
-        {/* Right Axis Price */}
-        <div className="absolute right-0 top-[40%] bg-[#089981] text-white text-[11px] px-1 font-bold z-20">
-          {stock?.price || "150.61"}
         </div>
       </div>
 

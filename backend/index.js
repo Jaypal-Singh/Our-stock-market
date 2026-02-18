@@ -11,17 +11,31 @@ import SubscriptionManager from './services/websocket/SubscriptionManager.js';
 import DataStreamHandler from './services/websocket/DataStreamHandler.js';
 import { SUBSCRIPTION_MODES } from './constants/subscriptionModes.js';
 import watchlistRoute from './routes/watchlistRoutes.js'
+import stockRoutes from './routes/stockRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import startAngelLoginCron from './cron/angelLoginCron.js';
 import fetchInstruments from './cron/fetchInstrumentsCron.js';
 import { createLogger } from './utils/logger.js';
 
 dotenv.config();
-connectDB();
 
-// Initialize Cron Jobs
-startAngelLoginCron();
-fetchInstruments();
+// Initialize App
+const initApp = async () => {
+    try {
+        await connectDB();
+        
+        // Initialize Cron Jobs after DB connection
+        startAngelLoginCron();
+        fetchInstruments();
+        
+        logger.success('Database connected and cron jobs started');
+    } catch (err) {
+        logger.error('Failed to initialize app', err);
+        process.exit(1);
+    }
+};
+
+initApp();
 
 const logger = createLogger('Main');
 const app = express();
@@ -61,6 +75,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/angel', angelRoutes);
 app.use('/api/watchlist', watchlistRoute);
+app.use('/api/stock', stockRoutes);
 app.use('/api/order', orderRoutes);
 
 

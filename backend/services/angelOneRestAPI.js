@@ -216,6 +216,55 @@ class AngelOneRestAPI {
         const quotes = await this.getQuotes([{ token, exch_seg: exchSeg }]);
         return quotes[0] || null;
     }
+
+    /**
+     * Get historical candle data
+     * @param {object} params - { exchange, symboltoken, interval, fromdate, todate }
+     */
+    async getCandleData({ exchange, symboltoken, interval, fromdate, todate }) {
+        if (!this.isInitialized) {
+            logger.error('getCandleData called but REST API not initialized');
+            throw new Error('REST API not initialized');
+        }
+
+        try {
+            // Debug Log to see what arguments are actually passed
+            console.log('DEBUG CANDLE ARGS:', JSON.stringify({ exchange, symboltoken, interval, fromdate, todate }));
+
+            logger.info(`Fetching candle data: Token=${symboltoken}, Exch=${exchange}, Interval=${interval}, From=${fromdate}, To=${todate}`);
+            
+            // Validate input
+            if (!symboltoken || !interval || !fromdate || !todate) {
+                logger.error('Missing required parameters for getCandleData');
+                return [];
+            }
+
+            const data = await this.smartApi.getCandleData({
+                exchange: exchange || 'NSE',
+                symboltoken,
+                interval,
+                fromdate,
+                todate
+            });
+            
+            // Log raw response for debugging
+            console.log('Raw Candle Data Response:', JSON.stringify(data));
+
+            if (data && data.status && data.data) {
+                logger.success(`Fetched ${data.data.length} candles for ${symboltoken}`);
+                return data.data;
+            } else {
+                logger.warn(`No candle data returned for ${symboltoken}. Status: ${data?.status}, Message: ${data?.message}`);
+                // Log full response if it fails
+                console.log('Failed Candle Response:', JSON.stringify(data));
+                return [];
+            }
+        } catch (error) {
+            logger.error(`Failed to fetch candle data for ${symboltoken}:`, error.message);
+            console.error(error);
+            throw error;
+        }
+    }
 }
 
 // Export singleton instance
