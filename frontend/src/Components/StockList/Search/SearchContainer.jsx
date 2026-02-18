@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
 import { searchInstrumentsAPI } from "../../../services/angelOneService";
 import SearchInput from "./SearchInput";
 import SearchFilters from "./SearchFilters";
@@ -8,12 +8,17 @@ import SearchResultsList from "./SearchResultsList";
  * SearchContainer Component
  * Orchestrates the search functionality, state management, and filtering logic.
 */
-const SearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell }) => {
+const SearchContainer = forwardRef(({ onAddStock, onSelectStock, onBuy, onSell }, ref) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const [activeFilter, setActiveFilter] = useState("All");
+
+    // Expose openSearch to parent via ref
+    useImperativeHandle(ref, () => ({
+        openSearch: () => setIsFocused(true)
+    }));
 
     const searchTimeoutRef = useRef(null);
     const containerRef = useRef(null);
@@ -98,7 +103,14 @@ const SearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell }) => {
     return (
         <>
             {/* Search Input Area */}
-            <div className="p-3 relative z-[100]" ref={containerRef}>
+            {/* When focused, we position it absolutely below the header to cover tabs */}
+            <div
+                className={`p-3 z-[100] transition-all duration-200 ${isFocused
+                    ? "absolute top-[48px] left-0 right-0 bg-[#0b0e14]"
+                    : "relative"
+                    }`}
+                ref={containerRef}
+            >
                 <SearchInput
                     query={query}
                     onChange={handleSearch}
@@ -114,7 +126,7 @@ const SearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell }) => {
 
             {/* Full Screen Overlay Results */}
             {isFocused && (
-                <div className="absolute top-[60px] left-0 right-0 bottom-0 bg-[#0b0e14] z-[90] overflow-y-auto customscrollbar border-t border-[#2a2e39] flex flex-col">
+                <div className="absolute top-[110px] left-0 right-0 bottom-0 bg-[#0b0e14] z-[90] overflow-y-auto customscrollbar border-t border-[#2a2e39] flex flex-col">
 
                     {/* Filter Tabs */}
                     <SearchFilters
@@ -146,6 +158,6 @@ const SearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell }) => {
             )}
         </>
     );
-};
+});
 
 export default SearchContainer;

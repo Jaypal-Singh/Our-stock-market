@@ -1,5 +1,5 @@
 import Tooltips from "./tooltips";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     Settings,
     X,
@@ -14,6 +14,9 @@ import BuyWindow from "../Buy&SellWindow/BuyWindow/BuyWindow";
 import SellWindow from "../Buy&SellWindow/SellWindow/SellWindow";
 import SearchContainer from "./Search/SearchContainer";
 import StockDetailsOverlay from "./StockDetailsOverlay";
+import EmptyWatchlist from "../Common/EmptyWatchlist";
+import CreateWatchlistModal from "../Common/CreateWatchlistModal";
+import axios from "axios";
 
 function StockList() {
     // Use the hook to get real-time stock data
@@ -26,6 +29,20 @@ function StockList() {
     // New Detail Window State
     const [showDetailsWindow, setShowDetailsWindow] = useState(false);
     const [selectedDetailStock, setSelectedDetailStock] = useState(null);
+
+    const [watchlists, setWatchlists] = useState([]);
+    const [activeWatchlist, setActiveWatchlist] = useState();
+    const [activeStocks, setActiveStocks] = useState([]);
+    const searchRef = useRef(null);
+
+    // Helper: get auth config from stored userInfo
+    const getAuthConfig = () => {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (!userInfo?.token) return null;
+            return { headers: { Authorization: `Bearer ${userInfo.token}` } };
+        } catch { return null; }
+    };
 
     const handleBuyClick = (stock) => {
         setSelectedStock(stock);
@@ -42,6 +59,101 @@ function StockList() {
     const handleStockSelect = (stock) => {
         setSelectedDetailStock(stock);
         setShowDetailsWindow(true);
+    };
+
+    // Fetch all watchlists (names) on mount
+    useEffect(() => {
+        fetchWatchlists();
+    }, []);
+
+    const fetchWatchlists = async () => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const res = await axios.get('http://localhost:5000/api/watchlist/getAllWatchlists', config);
+            setWatchlists(res.data);
+            if (res.data.length > 0 && !activeWatchlist) {
+                setActiveWatchlist(res.data[0]); // Default to first
+            }
+            // If activeWatchlist was already set (e.g. from state persistence), ensure it's valid?
+        } catch (error) {
+            console.error("Error fetching watchlists", error);
+        }
+    };
+
+    // Fetch stocks when activeWatchlist changes
+    useEffect(() => {
+        if (activeWatchlist) {
+            const name = activeWatchlist.name || activeWatchlist;
+            if (typeof name === 'string') {
+                fetchWatchlistStocks(name);
+            }
+        }
+    }, [activeWatchlist]);
+
+    const fetchWatchlistStocks = async (name) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const res = await axios.get(`http://localhost:5000/api/watchlist/${name}`, config);
+            const instruments = res.data;
+
+            if (instruments.length === 0) {
+                setActiveStocks([]);
+                return;
+            }
+
+            // Fetch live quotes for these instruments
+            try {
+                const { fetchStockQuotes } = await import('../../services/angelOneService');
+                const liveData = await fetchStockQuotes(instruments);
+
+                // Merge live data into instruments
+                const merged = instruments.map(inst => {
+                    const live = liveData.find(l => l.token === inst.token);
+                    if (live) {
+                        return {
+                            ...inst,
+                            price: live.ltp || live.price || 0,
+                            ltp: live.ltp || 0,
+                            change: live.netChange || live.change || 0,
+                            changePercent: live.percentChange || live.changePercent || 0,
+                            open: live.open,
+                            high: live.high,
+                            low: live.low,
+                            close: live.close,
+                            lastUpdated: new Date().toISOString(),
+                        };
+                    }
+                    return inst;
+                });
+                setActiveStocks(merged);
+            } catch (quoteErr) {
+                console.error("Error fetching live quotes, showing static data", quoteErr);
+                setActiveStocks(instruments);
+            }
+        } catch (error) {
+            console.error("Error fetching stocks", error);
+        }
+    };
+
+    // Add stock to active watchlist via backend API
+    const handleAddStockToWatchlist = async (stock) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const watchlistName = activeWatchlist?.name || activeWatchlist;
+            await axios.post('http://localhost:5000/api/watchlist/addToWatchlist', {
+                stockId: stock._id,
+                watchlistName: watchlistName,
+            }, config);
+            // Refresh the stock list after adding
+            if (typeof watchlistName === 'string') {
+                fetchWatchlistStocks(watchlistName);
+            }
+        } catch (error) {
+            console.error("Error adding stock to watchlist", error);
+        }
     };
 
     const handleStockBuyFromDetails = (stock) => {
@@ -68,9 +180,29 @@ function StockList() {
         return parseFloat(percentStr.toString().replace('%', ''));
     };
 
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    const handleCreateWatchlist = async (name) => {
+        try {
+            const config = getAuthConfig();
+            if (!config) return;
+            const res = await axios.post('http://localhost:5000/api/watchlist/createWatchlist', { name }, config);
+            await fetchWatchlists();
+            // Set the newly created watchlist as active
+            setActiveWatchlist(res.data);
+        } catch (error) {
+            console.error("Error creating watchlist", error);
+        }
+    };
+
 
     return (
         <div className="bg-[#0b0e14] w-full h-full flex flex-col text-[#d1d4dc] font-sans relative">
+            <CreateWatchlistModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onCreate={handleCreateWatchlist}
+            />
             {/* Windows Layer */}
             {showBuyWindow && selectedStock && (
                 <BuyWindow
@@ -93,7 +225,7 @@ function StockList() {
                     stockChange={parseFloat(selectedStock.change)}
                     stockChangePercent={parsePercent(selectedStock.percent)}
                     onClose={() => setShowSellWindow(false)}
-                    onSwitchToBuy={() => handleBuyClick(selectedStock)}
+                    onSwitchToBuy={() => handleSellClick(selectedStock)}
 
                 />
             )}
@@ -125,26 +257,40 @@ function StockList() {
                         {error && (
                             <span className="text-[10px] text-red-400">{error}</span>
                         )}
-                        {/* <Settings size={18} className="cursor-pointer hover:text-white" /> */}
-                        {/* <X size={20} className="cursor-pointer hover:text-white" /> */}
+                        <Filter size={18} className="cursor-pointer hover:text-white" />
+                        <Settings size={18} className="cursor-pointer hover:text-white" />
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center px-3 py-2 gap-4 text-[13px] border-b border-[#2a2e39]">
-                    <span className="text-[#2962ff] border-b-2 border-[#2962ff] pb-2 cursor-pointer">
-                        mywatchlist
-                    </span>
-                    <span className="text-[#868993] pb-2 cursor-pointer hover:text-white">
-                        JAINISH
-                    </span>
-                    <span className="text-[#868993] pb-2 cursor-pointer hover:text-white">
-                        Today
-                    </span>
+                <div className="flex items-center justify-between px-3 py-2 text-[13px] border-b border-[#2a2e39]">
+                    <div className="flex overflow-x-auto no-scrollbar gap-4 flex-1">
+                        {watchlists.map((list) => (
+                            <span
+                                key={list._id || list}
+                                onClick={() => setActiveWatchlist(list)}
+                                className={`pb-2 cursor-pointer whitespace-nowrap border-b-2 transition-colors ${(activeWatchlist?._id === list._id || activeWatchlist === list)
+                                    ? "text-[#2962ff] border-[#2962ff]"
+                                    : "text-[#868993] border-transparent hover:text-white"
+                                    }`}
+                            >
+                                {list.name || list}
+                            </span>
+                        ))}
+                    </div>
+                    <div className="pl-3 border-l border-[#2a2e39] shrink-0">
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="text-[#868993] hover:text-[#2962ff] p-1"
+                        >
+                            <Plus size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 <SearchContainer
-                    onAddStock={addStock}
+                    ref={searchRef}
+                    onAddStock={handleAddStockToWatchlist}
                     onSelectStock={handleStockSelect}
                     onBuy={handleBuyClick}
                     onSell={handleSellClick}
@@ -153,8 +299,13 @@ function StockList() {
 
             {/* 2. Scrollable List Area (Ye portion scroll hoga) */}
             <div className="flex-1 overflow-y-auto customscrollbar">
-                {stocks && stocks.length > 0 ? (
-                    stocks.map((stock, index) => {
+                {/* Use activeStocks if available (from DB), else fallback to socket stocks if intended. 
+                    Actually, if we want to show the WATCHLIST stocks, we must use activeStocks.
+                    But activeStocks might lack live data properties if not merged.
+                    For now, let's render activeStocks and rely on whatever properties used.
+                */}
+                {activeStocks && activeStocks.length > 0 ? (
+                    activeStocks.map((stock, index) => {
                         if (!stock || typeof stock !== 'object') return null;
 
                         const hasLiveData = stock.lastUpdated || (stock.price && stock.price !== 0);
@@ -222,9 +373,11 @@ function StockList() {
                         );
                     })
                 ) : (
-                    <div className="text-center text-[#868993] py-8">
-                        {isConnected ? 'No stocks in watchlist' : 'Connecting...'}
-                    </div>
+                    <EmptyWatchlist onAddClick={() => {
+                        if (searchRef.current) {
+                            searchRef.current.openSearch();
+                        }
+                    }} />
                 )}
             </div>
 

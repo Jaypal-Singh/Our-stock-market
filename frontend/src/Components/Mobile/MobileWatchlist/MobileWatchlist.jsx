@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAngelOneSocket from '../../../Hooks/useAngelOneSocket';
+import EmptyWatchlist from '../../Common/EmptyWatchlist';
 
-const MobileWatchlist = () => {
+const MobileWatchlist = ({ stocks = [], isConnected = false, error = null, onAddClick }) => {
     const navigate = useNavigate();
-    const { stocks = [], isConnected = false, error = null } = useAngelOneSocket() || {};
 
     console.log('MobileWatchlist render:', { stocks, isConnected, error });
 
@@ -34,9 +33,16 @@ const MobileWatchlist = () => {
 
                     const hasLiveData = stock.lastUpdated || (stock.price && stock.price !== 0 && stock.price !== "0");
                     const isUp = (stock.changePercent || 0) >= 0;
-                    const price = stock.price || stock.ltp || 0;
-                    const change = stock.change || 0;
-                    const changePercent = stock.changePercent || 0;
+
+                    // Safe Parse Helpers
+                    const safeFloat = (val) => {
+                        const num = parseFloat(val);
+                        return isNaN(num) ? 0 : num;
+                    };
+
+                    const price = safeFloat(stock.price || stock.ltp || 0);
+                    const change = safeFloat(stock.change || 0);
+                    const changePercent = safeFloat(stock.changePercent || 0);
                     const exchangeType = stock.exch_seg || 'NSE';
 
                     return (
@@ -60,13 +66,13 @@ const MobileWatchlist = () => {
                                 {hasLiveData ? (
                                     <>
                                         <div className={`font-semibold text-sm ${isUp ? 'text-[#089981]' : 'text-[#f23645]'} flex items-center gap-1 justify-end`}>
-                                            <span>{typeof price === 'number' ? price.toFixed(2) : '0.00'} {isUp ? "▲" : "▼"}</span>
+                                            <span>{price.toFixed(2)} {isUp ? "▲" : "▼"}</span>
                                             {stock.lastUpdated && (
                                                 <span className="w-1.5 h-1.5 bg-[#089981] rounded-full animate-pulse"></span>
                                             )}
                                         </div>
                                         <div className="text-[10px] text-[#868993] mt-0.5">
-                                            {typeof change === 'number' ? change.toFixed(2) : '0.00'} ({typeof changePercent === 'number' ? changePercent.toFixed(2) : '0.00'}%)
+                                            {change.toFixed(2)} ({changePercent.toFixed(2)}%)
                                         </div>
                                     </>
                                 ) : (
@@ -84,9 +90,7 @@ const MobileWatchlist = () => {
                     );
                 })
             ) : (
-                <div className="px-4 py-8 text-center text-[#868993]">
-                    {isConnected ? 'No stocks in watchlist' : 'Loading stocks...'}
-                </div>
+                <EmptyWatchlist onAddClick={onAddClick} />
             )}
         </div>
     );

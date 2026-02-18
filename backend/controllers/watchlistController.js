@@ -1,14 +1,78 @@
 import Watchlist from '../models/Watchlist.js';
 
-export const addToWatchlist = async (req, res) => {
+// Create a new named watchlist
+export const createWatchlist = async (req, res) => {
     try {
-        const { stockId } = req.body;
+        const { name } = req.body;
         const userId = req.user._id;
 
-        let watchlist = await Watchlist.findOne({ user: userId });
+        const existing = await Watchlist.findOne({ user: userId, name });
+        if (existing) {
+            return res.status(400).json({ message: 'Watchlist with this name already exists' });
+        }
+
+        const watchlist = await Watchlist.create({ user: userId, name, stocks: [] });
+        res.status(201).json(watchlist);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get all watchlists (names and ids mainly, or full objects)
+export const getAllWatchlists = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const watchlists = await Watchlist.find({ user: userId }).select('name _id stocks'); // Select minimal if needed, or all
+        res.status(200).json(watchlists);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get specific watchlist by name
+export const getWatchlistByName = async (req, res) => {
+    try {
+        const { name } = req.params;
+        const userId = req.user._id;
+
+        const watchlist = await Watchlist.findOne({ user: userId, name }).populate('stocks');
 
         if (!watchlist) {
-            watchlist = new Watchlist({ user: userId, stocks: [] });
+            return res.status(404).json({ message: 'Watchlist not found' });
+        }
+
+        res.status(200).json(watchlist.stocks);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const addToWatchlist = async (req, res) => {
+    try {
+        const { stockId, watchlistId, watchlistName } = req.body; // Support ID or Name
+        const userId = req.user._id;
+
+        let query = { user: userId };
+        if (watchlistId) query._id = watchlistId;
+        else if (watchlistName) query.name = watchlistName;
+        else {
+            // Default logic: Find "mywatchlist" or create it if strict legacy mode, 
+            // but effectively we need a target.
+            // If nothing provided, maybe find the first one?
+            const first = await Watchlist.findOne({ user: userId });
+            if (first) {
+                query._id = first._id;
+            } else {
+                // Create default
+                const newDefault = await Watchlist.create({ user: userId, name: 'mywatchlist', stocks: [stockId] });
+                return res.status(201).json(newDefault);
+            }
+        }
+
+        const watchlist = await Watchlist.findOne(query);
+
+        if (!watchlist) {
+            return res.status(404).json({ message: 'Watchlist not found' });
         }
 
         if (watchlist.stocks.includes(stockId)) {
@@ -24,35 +88,34 @@ export const addToWatchlist = async (req, res) => {
     }
 };
 
-export const getWatchlist = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const watchlist = await Watchlist.findOne({ user: userId }).populate('stocks');
-
-        if (!watchlist) {
-            return res.status(200).json([]);
-        }
-
-        res.status(200).json(watchlist.stocks);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 export const removeFromWatchlist = async (req, res) => {
     try {
         const { stockId } = req.params;
+        const { watchlistId, watchlistName } = req.query; // Expect query params for DELETE
         const userId = req.user._id;
 
-        const watchlist = await Watchlist.findOne({ user: userId });
+        let query = { user: userId };
+        if (watchlistId) query._id = watchlistId;
+        else if (watchlistName) query.name = watchlistName;
+        else {
+            // If no watchlist specified, remove from ALL? Or just first?
+            // Safest: Remove from all watchlists of this user containing the stock
+            await Watchlist.updateMany(
+                { user: userId, stocks: stockId },
+                { $pull: { stocks: stockId } }
+            );
+            // Return updated state of "active" or just success?
+            // Let's return success message or updated first list.
+            return res.status(200).json({ message: 'Removed from all lists' });
+        }
+
+        const watchlist = await Watchlist.findOne(query);
 
         if (watchlist) {
             watchlist.stocks = watchlist.stocks.filter((id) => id.toString() !== stockId);
             await watchlist.save();
-            // populate after remove to return updated list with details, or just return ids?
-            // User likely needs updated list.
-            const updatedWatchlist = await Watchlist.findOne({ user: userId }).populate('stocks');
-            return res.status(200).json(updatedWatchlist.stocks);
+            const updated = await Watchlist.findOne(query).populate('stocks');
+            return res.status(200).json(updated.stocks);
         }
 
         res.status(404).json({ message: 'Watchlist not found' });

@@ -1,21 +1,31 @@
 import React from 'react';
-import { Search, Zap } from 'lucide-react';
+import { Search, Zap, Plus } from 'lucide-react';
 
-const MobileHeader = () => {
+import MobileSearchContainer from './Search/MobileSearchContainer';
+
+const MobileHeader = ({
+    onAddStock,
+    onSelectStock,
+    onBuy,
+    onSell,
+    watchlists = [],
+    activeWatchlist,
+    onWatchlistChange,
+    onAddWatchlist,
+    forceSearchOpen,
+    onForceSearchOpenHandled
+}) => {
     return (
         <div className="md:hidden bg-[#0b0e14] text-[#d1d4dc] pb-2 font-sans sticky top-0 z-50">
-            {/* Search Bar (Now Below Cards) */}
-            <div className="px-4 mt-3">
-                <div className="bg-[#1e222d] rounded px-3 py-2 flex items-center border border-[#2a2e39]">
-                    <Search size={16} className="text-[#868993] mr-2" />
-                    <input
-                        type="text"
-                        placeholder="Search & add"
-                        className="bg-transparent border-none outline-none w-full text-sm placeholder-[#565961] text-[#d1d4dc]"
-                    />
-                    <span className="text-[#868993] text-xs border border-[#565961] rounded px-1.5 py-0.5">/</span>
-                </div>
-            </div>
+            {/* Search Component */}
+            <MobileSearchContainer
+                onAddStock={onAddStock}
+                onSelectStock={onSelectStock}
+                onBuy={onBuy}
+                onSell={onSell}
+                forceOpen={forceSearchOpen}
+                onForceOpenHandled={onForceSearchOpenHandled}
+            />
             {/* Markets Today Section (Now on Top) */}
             <div className="p-4 pb-2">
 
@@ -51,14 +61,32 @@ const MobileHeader = () => {
 
 
             {/* Tabs */}
-            <div className="flex items-center gap-6 text-sm font-medium mt-2 border-b border-[#2a2e39] pb-0 px-4">
-                <div className="text-[#2962ff] border-b-2 border-[#2962ff] pb-2 px-1 cursor-pointer">
-                    <span className="text-[#2962ff] mr-1">•</span>
-                    mywatchlist
+            {/* Tabs */}
+            <div className="flex items-center justify-between text-sm font-medium mt-2 border-b border-[#2a2e39] pb-0 px-4">
+                <div className="flex overflow-x-auto no-scrollbar gap-6 flex-1 mask-linear-fade">
+                    {watchlists.map((list) => {
+                        const isActive = activeWatchlist?._id === list._id;
+                        return (
+                            <div
+                                key={list._id}
+                                onClick={() => onWatchlistChange && onWatchlistChange(list)}
+                                className={`pb-2 px-1 cursor-pointer whitespace-nowrap transition-colors ${isActive
+                                    ? "text-[#2962ff] border-b-2 border-[#2962ff]"
+                                    : "text-[#868993] hover:text-white border-b-2 border-transparent"
+                                    }`}
+                            >
+                                {isActive && <span className="text-[#2962ff] mr-1">•</span>}
+                                {list.name}
+                            </div>
+                        );
+                    })}
                 </div>
-                <div className="text-[#868993] pb-2 px-1 hover:text-white cursor-pointer">JAINISH</div>
-                <div className="text-[#868993] pb-2 px-1 hover:text-white cursor-pointer">Today</div>
-                <div className="text-[#2962ff] pb-2 px-1 ml-auto whitespace-nowrap cursor-pointer text-xs">+ Add new</div>
+                <div
+                    onClick={onAddWatchlist}
+                    className="text-[#2962ff] pb-2 pl-4 ml-2 border-l border-[#2a2e39] cursor-pointer flex items-center shrink-0"
+                >
+                    <Plus size={18} />
+                </div>
             </div>
 
         </div>

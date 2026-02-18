@@ -6,6 +6,10 @@ const watchlistSchema = mongoose.Schema({
         ref: 'User',
         required: true,
     },
+    name: {
+        type: String,
+        required: true,
+    },
     stocks: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Instrument',
@@ -13,6 +17,9 @@ const watchlistSchema = mongoose.Schema({
 }, {
     timestamps: true,
 });
+
+// Ensure a user cannot have two watchlists with the same name
+watchlistSchema.index({ user: 1, name: 1 }, { unique: true });
 
 const Watchlist = mongoose.model('Watchlist', watchlistSchema);
 
