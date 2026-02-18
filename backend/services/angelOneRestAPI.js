@@ -161,6 +161,8 @@ class AngelOneRestAPI {
                                 exch_seg: exchSeg,
                                 symbol: stock.symbol || stock.name,
                                 ltp: stockData.ltp, // API usually returns actual value, verify if division needed
+                                change: stockData.netChange, // Add net change
+                                percentChange: stockData.percentChange, // Add percent change
                                 open: stockData.open,
                                 high: stockData.high,
                                 low: stockData.low,
