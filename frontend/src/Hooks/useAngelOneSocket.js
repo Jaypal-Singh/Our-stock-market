@@ -30,7 +30,7 @@ const useAngelOneSocket = () => {
                 // Always fetch initial data via REST to get 'Previous Close' and populate UI immediately
                 // This ensures we have a baseline for percentage calculations even before the first socket tick
                 if (status && !hasLoadedRestData.current) {
-                    console.log('🚀 Fetching initial stock data via REST API...');
+                    console.log('� Fetching initial stock data via REST API...');
                     
                     const stocksToFetch = initialStocks.filter(s => s.token);
                     const quotes = await fetchStockQuotes(stocksToFetch);

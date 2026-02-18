@@ -74,24 +74,26 @@ function StockList() {
             {/* Windows Layer */}
             {showBuyWindow && selectedStock && (
                 <BuyWindow
-                    uid="buy-window-main"
+                    uid={selectedStock.token}
                     stockName={selectedStock.name}
+                    stockSymbol={selectedStock.symbol}
                     stockPrice={parsePrice(selectedStock.price)}
                     stockChange={parseFloat(selectedStock.change)}
                     stockChangePercent={parsePercent(selectedStock.percent)}
                     onClose={() => setShowBuyWindow(false)}
-                    onSwitchToSell={()=>handleSellClick(selectedStock)}
+                    onSwitchToSell={() => handleSellClick(selectedStock)}
                 />
             )}
             {showSellWindow && selectedStock && (
                 <SellWindow
-                    uid="sell-window-main"
+                    uid={selectedStock.token}
                     stockName={selectedStock.name}
+                    stockSymbol={selectedStock.symbol}
                     stockPrice={parsePrice(selectedStock.price)}
                     stockChange={parseFloat(selectedStock.change)}
                     stockChangePercent={parsePercent(selectedStock.percent)}
                     onClose={() => setShowSellWindow(false)}
-                    onSwitchToBuy={()=>handleSellClick(selectedStock)}
+                    onSwitchToBuy={() => handleBuyClick(selectedStock)}
 
                 />
             )}
