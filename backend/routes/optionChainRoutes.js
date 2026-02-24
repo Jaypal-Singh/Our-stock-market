@@ -1,7 +1,10 @@
 import express from 'express';
-import { getOptionGreeks } from '../controllers/optionChainController.js';
+import { getOptionGreeks, getExpiries } from '../controllers/optionChainController.js';
 
 const router = express.Router();
+
+// Get valid expiry dates
+router.get('/expiries', getExpiries);
 
 /**
  * @route   POST /api/option-chain/greeks

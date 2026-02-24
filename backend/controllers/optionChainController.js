@@ -104,6 +104,16 @@ export const getOptionGreeks = async (req, res) => {
             });
         }
 
+        // ── Validate that name is a supported F&O index ───────────────────
+        const SUPPORTED_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'];
+        if (!SUPPORTED_INDICES.includes(name)) {
+            logger.warn(`Rejected unsupported index name: "${name}". Must be one of: ${SUPPORTED_INDICES.join(', ')}`);
+            return res.status(400).json({
+                success: false,
+                message: `Option Greeks are only available for indices: ${SUPPORTED_INDICES.join(', ')}. "${name}" is not supported.`
+            });
+        }
+
         // ── Check in-memory cache first ───────────────────────────────────
         const memoryCached = getCached(name, expirydate);
         if (memoryCached) {
@@ -185,9 +195,9 @@ export const getOptionGreeks = async (req, res) => {
                 } else {
                     lastError = `HTTP ${response.status}: ${rawText.substring(0, 200)}`;
                 }
-            } else {
                 result = JSON.parse(rawText);
                 if (result.status && result.data && result.data.length > 0) {
+                    try { require('fs').writeFileSync('debug_greeks.json', JSON.stringify(result.data[0], null, 2)); } catch(e){}
                     logger.success(`SUCCESS — ${result.data.length} records`);
                 } else {
                     lastError = result.message || 'No Data Available from API';
@@ -206,12 +216,39 @@ export const getOptionGreeks = async (req, res) => {
         // ── Process successful API response ───────────────────────────────
         if (result && result.status && result.data && result.data.length > 0) {
             const strikeMap = {};
+            
+            // Try formatting tokens from ScripMaster
+            let scripTokens = [];
+            try {
+                const fs = await import('fs');
+                const path = await import('path');
+                const scripPath = path.resolve('ScripMaster.json');
+                if (fs.existsSync(scripPath)) {
+                    const allScrips = JSON.parse(fs.readFileSync(scripPath, 'utf8'));
+                    // Filter down to the specific index and expiry to speed up lookup
+                    scripTokens = allScrips.filter(s => 
+                        (s.exch_seg === 'NFO' || s.exch_seg === 'BFO') && 
+                        s.instrumenttype === 'OPTIDX' && 
+                        s.name === name && 
+                        s.expiry === expirydate
+                    );
+                }
+            } catch (err) {
+                logger.warn(`Failed to load ScripMaster for tokens: ${err.message}`);
+            }
 
             result.data.forEach(item => {
                 const strike = parseFloat(item.strikePrice);
                 if (!strikeMap[strike]) {
                     strikeMap[strike] = { strikePrice: strike, CE: null, PE: null };
                 }
+                
+                // Lookup scrip info for this specific option
+                const strikeStr = (strike * 100).toFixed(6); // Angel One Scrip Master precision (e.g. 23000 -> 2300000.000000)
+                const scripInfo = scripTokens.find(s => 
+                    s.strike === strikeStr && 
+                    s.symbol.endsWith(item.optionType)
+                );
 
                 const greekData = {
                     delta: parseFloat(item.delta) || 0,
@@ -219,7 +256,11 @@ export const getOptionGreeks = async (req, res) => {
                     theta: parseFloat(item.theta) || 0,
                     vega: parseFloat(item.vega) || 0,
                     impliedVolatility: parseFloat(item.impliedVolatility) || 0,
-                    tradeVolume: parseFloat(item.tradeVolume) || 0
+                    tradeVolume: parseFloat(item.tradeVolume) || 0,
+                    token: scripInfo ? scripInfo.token : null,
+                    symbol: scripInfo ? scripInfo.symbol : null,
+                    lotsize: scripInfo ? parseInt(scripInfo.lotsize) : null,
+                    exch_seg: scripInfo ? scripInfo.exch_seg : (name === 'SENSEX' ? 'BFO' : 'NFO')
                 };
 
                 if (item.optionType === 'CE') {
@@ -252,13 +293,65 @@ export const getOptionGreeks = async (req, res) => {
             });
         }
 
+        // ── Helper to inject tokens from ScripMaster ──────────────────────────
+        const injectTokens = async (chainData) => {
+            let scripTokens = [];
+            try {
+                const fs = await import('fs');
+                const path = await import('path');
+                const scripPath = path.resolve('ScripMaster.json');
+                if (fs.existsSync(scripPath)) {
+                    const allScrips = JSON.parse(fs.readFileSync(scripPath, 'utf8'));
+                    scripTokens = allScrips.filter(s => 
+                        (s.exch_seg === 'NFO' || s.exch_seg === 'BFO') && 
+                        s.instrumenttype === 'OPTIDX' && 
+                        s.name === name && 
+                        s.expiry === expirydate
+                    );
+                }
+            } catch (err) {
+                logger.warn(`Failed to load ScripMaster for tokens: ${err.message}`);
+            }
+
+            if (scripTokens.length === 0) return chainData;
+
+            return chainData.map(strikeObj => {
+                const strikeStr = (parseFloat(strikeObj.strikePrice) * 100).toFixed(6);
+                
+                const injectToGreek = (greekObj, type) => {
+                    if (!greekObj) return null;
+                    const scripInfo = scripTokens.find(s => 
+                        s.strike === strikeStr && 
+                        s.symbol.endsWith(type)
+                    );
+                    if (scripInfo) {
+                        greekObj.token = scripInfo.token;
+                        greekObj.symbol = scripInfo.symbol;
+                        greekObj.lotsize = parseInt(scripInfo.lotsize);
+                        greekObj.exch_seg = scripInfo.exch_seg;
+                    }
+                    return greekObj;
+                };
+
+                return {
+                    ...strikeObj,
+                    CE: injectToGreek(strikeObj.CE, 'CE'),
+                    PE: injectToGreek(strikeObj.PE, 'PE')
+                };
+            });
+        };
+
         // ── API returned no data — try DB cache (last closing data) ───────
         const dbCached = await getFromDb(name, expirydate);
         if (dbCached) {
             logger.info(`Serving DB cached data for ${name}:${expirydate}`);
+            
+            // Inject tokens into cached data just in case they were missing
+            const enhancedData = await injectTokens(dbCached.data);
+            
             return res.status(200).json({
                 success: true,
-                data: dbCached.data,
+                data: enhancedData,
                 name,
                 expiry: expirydate,
                 count: dbCached.count,
@@ -286,6 +379,31 @@ export const getOptionGreeks = async (req, res) => {
             success: false,
             message: 'Internal server error: ' + error.message
         });
+    }
+};
+
+/**
+ * Get accurate, valid Expiries directly from Scrip Master
+ * GET /api/option-chain/expiries
+ */
+export const getExpiries = async (req, res) => {
+    try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const expiriesPath = path.resolve('expiries.json');
+        
+        if (!fs.existsSync(expiriesPath)) {
+            return res.status(404).json({ success: false, message: 'Expiries not found' });
+        }
+        
+        const data = fs.readFileSync(expiriesPath, 'utf8');
+        return res.status(200).json({
+            success: true,
+            data: JSON.parse(data)
+        });
+    } catch (error) {
+        logger.warn(`Error reading expiries: ${error.message}`);
+        return res.status(500).json({ success: false, message: 'Failed to load expiries' });
     }
 };
 
