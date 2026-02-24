@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { ArrowLeft, RefreshCw, AlertCircle, ChevronDown, Clock, Info } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import useAngelOneSocket from "../../../../hooks/useAngelOneSocket";
 
 // ─── F&O Indices available for Option Greeks ──────────────────────────────────
+// expiryDay = JS getDay() value: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 const FNO_INDICES = [
-  { name: "NIFTY", label: "NIFTY 50" },
-  { name: "BANKNIFTY", label: "BANK NIFTY" },
-  { name: "FINNIFTY", label: "FIN NIFTY" },
-  { name: "MIDCPNIFTY", label: "MIDCAP NIFTY" },
-  { name: "SENSEX", label: "SENSEX" },
+  { name: "NIFTY", label: "NIFTY 50", expiryDay: 4 }, // Thursday
+  { name: "BANKNIFTY", label: "BANK NIFTY", expiryDay: 3 }, // Wednesday
+  { name: "FINNIFTY", label: "FIN NIFTY", expiryDay: 2 }, // Tuesday
+  { name: "MIDCPNIFTY", label: "MIDCAP NIFTY", expiryDay: 1 }, // Monday
+  { name: "SENSEX", label: "SENSEX", expiryDay: 5 }, // Friday
 ];
 
 // ─── Market hours helper (IST) ────────────────────────────────────────────────
@@ -21,29 +23,6 @@ function isMarketOpen() {
   if (day === 0 || day === 6) return false;
   const hhmm = ist.getHours() * 100 + ist.getMinutes();
   return hhmm >= 915 && hhmm <= 1530;
-}
-
-// ─── Expiry date helpers ─────────────────────────────────────────────────────
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-
-/** Generate next N weekly/monthly expiry dates in AngelOne format e.g. "27FEB2026" */
-function generateExpiries(count = 8) {
-  const today = new Date();
-  const expiries = [];
-  const d = new Date(today);
-
-  // Walk forward up to 180 days, pick every Thursday (weekly) up to count
-  while (expiries.length < count) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() === 4) {
-      // Thursday
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = MONTHS[d.getMonth()];
-      const yyyy = d.getFullYear();
-      expiries.push(`${dd}${mm}${yyyy}`);
-    }
-  }
-  return expiries;
 }
 
 /** Format "27FEB2026" → "27 Feb 2026" for display */
@@ -66,9 +45,22 @@ function OptionChain() {
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes("/trade/option-chain");
 
-  const expiries = generateExpiries(8);
-  const [expiry, setExpiry] = useState(expiries[0] ?? "");
+  // Index/stock selector — only use stock name if it's actually an FNO index
+  const stockName = stock?.name ?? stock?.symbol ?? "";
+  const defaultIndex = FNO_INDICES.some(idx => idx.name === stockName) ? stockName : "NIFTY";
+  const [selectedIndex, setSelectedIndex] = useState(defaultIndex);
+  const underlyingName = selectedIndex;
+
+  const [allExpiries, setAllExpiries] = useState({});
+  const expiries = allExpiries[selectedIndex] || [];
+
+  const [expiry, setExpiry] = useState("");
   const [rows, setRows] = useState([]);
+
+  // Connect live websocket data
+  const [optionTokens, setOptionTokens] = useState([]);
+  const { stocks: liveOptionData } = useAngelOneSocket(optionTokens);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
@@ -76,11 +68,26 @@ function OptionChain() {
   const [cooldown, setCooldown] = useState(0);
   const lastFetchTime = React.useRef(0);
 
-  // Index/stock selector
-  const defaultIndex = stock?.name ?? stock?.symbol ?? "NIFTY";
-  const [selectedIndex, setSelectedIndex] = useState(defaultIndex);
-  const underlyingName = selectedIndex;
   const marketOpen = useMemo(() => isMarketOpen(), []);
+
+  // Fetch valid option chain expiries from backend on mount
+  useEffect(() => {
+    fetch("/api/option-chain/expiries")
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && json.data) {
+          setAllExpiries(json.data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch expiries:", err));
+  }, []);
+
+  // When index changes, expiries regenerate — reset selected expiry to first
+  useEffect(() => {
+    if (expiries.length > 0 && (!expiry || !expiries.includes(expiry))) {
+      setExpiry(expiries[0]);
+    }
+  }, [selectedIndex, expiries, expiry]);
 
   const COOLDOWN_SEC = 10; // Minimum seconds between API calls
 
@@ -130,15 +137,27 @@ function OptionChain() {
         // Customize the message if we know it's a data-less response
         setError(json.message || "No data available for this expiry.");
         setRows([]);
+        setOptionTokens([]);
         setCachedAt(null);
       } else {
-        setRows(json.data ?? []);
+        const optionData = json.data ?? [];
+        setRows(optionData);
+
+        // Extract real-time streaming tokens for WebSockets
+        const newTokens = [];
+        optionData.forEach(row => {
+          if (row.CE && row.CE.token) newTokens.push({ token: row.CE.token, exch_seg: row.CE.exch_seg });
+          if (row.PE && row.PE.token) newTokens.push({ token: row.PE.token, exch_seg: row.PE.exch_seg });
+        });
+        setOptionTokens(newTokens);
+
         setLastFetched(new Date());
         setCachedAt(json.fromCache && json.cachedAt ? new Date(json.cachedAt) : null);
       }
     } catch (err) {
       setError("Network error: " + err.message);
       setRows([]);
+      setOptionTokens([]);
     } finally {
       setLoading(false);
     }
@@ -304,7 +323,6 @@ function OptionChain() {
             </span>
           </div>
         )}
-
         {/* ── Loading Skeleton ── */}
         {loading && rows.length === 0 && (
           <div className={`space-y-1 ${isMobileView ? "px-4" : ""}`}>
@@ -322,12 +340,12 @@ function OptionChain() {
         {/* ── Greeks Table ── */}
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto overflow-y-auto customscrollbar flex-1">
-            <table className="w-full text-[11px] text-center border-collapse min-w-[720px]">
+            <table className="w-full text-[11px] text-center border-collapse min-w-[800px]">
               <thead className="sticky top-0 z-10">
                 {/* Group header */}
                 <tr className="bg-[var(--bg-secondary)] border-y border-[var(--border-primary)]">
                   <th
-                    colSpan="5"
+                    colSpan="6"
                     className="py-2 border-r border-[var(--border-primary)] text-[#089981] tracking-widest font-bold"
                   >
                     CALL
@@ -336,7 +354,7 @@ function OptionChain() {
                     STRIKE
                   </th>
                   <th
-                    colSpan="5"
+                    colSpan="6"
                     className="py-2 border-l border-[var(--border-primary)] text-[#f23645] tracking-widest font-bold"
                   >
                     PUT
@@ -348,11 +366,13 @@ function OptionChain() {
                   <ColHeader label="Gamma" />
                   <ColHeader label="Theta" />
                   <ColHeader label="Delta" />
-                  <ColHeader label="IV" cls="border-r border-[var(--border-primary)]" />
+                  <ColHeader label="IV" />
+                  <ColHeader label="LTP" cls="border-r border-[var(--border-primary)] font-bold text-[var(--text-primary)]" />
                   <th className="p-2 bg-[var(--bg-secondary)] text-[var(--text-primary)] min-w-[80px] whitespace-nowrap">
                     Price
                   </th>
-                  <ColHeader label="IV" cls="border-l border-[var(--border-primary)]" />
+                  <ColHeader label="LTP" cls="border-l border-[var(--border-primary)] font-bold text-[var(--text-primary)]" />
+                  <ColHeader label="IV" />
                   <ColHeader label="Delta" />
                   <ColHeader label="Theta" />
                   <ColHeader label="Gamma" />
@@ -363,6 +383,13 @@ function OptionChain() {
                 {rows.map((row, i) => {
                   const ce = row.CE ?? {};
                   const pe = row.PE ?? {};
+
+                  const ceLiveData = ce.token ? liveOptionData.find(s => s.token === ce.token) : null;
+                  const peLiveData = pe.token ? liveOptionData.find(s => s.token === pe.token) : null;
+
+                  const ceLtp = ceLiveData?.ltp ?? "—";
+                  const peLtp = peLiveData?.ltp ?? "—";
+
                   return (
                     <tr
                       key={i}
@@ -373,10 +400,10 @@ function OptionChain() {
                       <CallCell value={fmt4(ce.gamma)} />
                       <CallCell value={fmt4(ce.theta)} />
                       <CallCell value={fmt4(ce.delta)} />
-                      <CallCell
-                        value={fmt2(ce.impliedVolatility)}
-                        cls="border-r border-[var(--border-primary)]"
-                      />
+                      <CallCell value={fmt2(ce.impliedVolatility)} />
+                      <td className="p-2 font-bold text-[#089981] border-r border-[var(--border-primary)]">
+                        {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
+                      </td>
 
                       {/* Strike */}
                       <td className="p-2 bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)] whitespace-nowrap">
@@ -384,10 +411,10 @@ function OptionChain() {
                       </td>
 
                       {/* PUT side */}
-                      <PutCell
-                        value={fmt2(pe.impliedVolatility)}
-                        cls="border-l border-[var(--border-primary)]"
-                      />
+                      <td className="p-2 font-bold text-[#f23645] border-l border-[var(--border-primary)]">
+                        {peLtp !== "—" ? `₹${peLtp}` : "—"}
+                      </td>
+                      <PutCell value={fmt2(pe.impliedVolatility)} />
                       <PutCell value={fmt4(pe.delta)} />
                       <PutCell value={fmt4(pe.theta)} />
                       <PutCell value={fmt4(pe.gamma)} />
