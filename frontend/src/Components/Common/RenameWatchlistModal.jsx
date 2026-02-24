@@ -24,14 +24,14 @@ const RenameWatchlistModal = ({ isOpen, onClose, onRename, currentName }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-[#1e222d] border border-[#2a2e39] rounded-lg w-full max-w-sm shadow-2xl"
+                className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg w-full max-w-sm shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between p-4 border-b border-[#2a2e39]">
-                    <h3 className="text-[#d1d4dc] font-medium text-sm">Rename Watchlist</h3>
-                    <button onClick={onClose} className="text-[#868993] hover:text-white">
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+                    <h3 className="text-[var(--text-secondary)] font-medium text-sm">Rename Watchlist</h3>
+                    <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                         <X size={16} />
                     </button>
                 </div>
@@ -42,14 +42,14 @@ const RenameWatchlistModal = ({ isOpen, onClose, onRename, currentName }) => {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Enter new name"
-                        className="w-full bg-[#131722] border border-[#2a2e39] rounded px-3 py-2 text-sm text-[#d1d4dc] focus:outline-none focus:border-[#2962ff] transition-colors"
+                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-3 py-2 text-sm text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                         maxLength={30}
                     />
                     <div className="flex gap-2 mt-4 justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-1.5 text-sm text-[#868993] hover:text-white transition-colors rounded"
+                            className="px-4 py-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors rounded"
                         >
                             Cancel
                         </button>

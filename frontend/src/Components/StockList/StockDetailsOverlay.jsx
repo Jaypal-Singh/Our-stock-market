@@ -24,31 +24,31 @@ const StockDetailsOverlay = ({ stock, onClose, onBuy, onSell }) => {
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-[#1e222d] w-[90%] max-w-[500px] rounded-lg shadow-2xl border border-[#2a2e39] overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[var(--bg-card)] w-[90%] max-w-[500px] rounded-lg shadow-2xl border border-[var(--border-primary)] overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
-                <div className="p-4 border-b border-[#2a2e39] flex justify-between items-start bg-[#1e222d]">
+                <div className="p-4 border-b border-[var(--border-primary)] flex justify-between items-start bg-[var(--bg-card)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-[#e1e4e8]">{stock.name}</h2>
-                            <span className="text-[10px] bg-[#2a2e39] text-[#868993] px-1.5 py-0.5 rounded border border-[#363a45]">
+                            <h2 className="text-xl font-bold text-[var(--text-primary)]">{stock.name}</h2>
+                            <span className="text-[10px] bg-[var(--bg-secondary)] text-[var(--text-muted)] px-1.5 py-0.5 rounded border border-[var(--border-primary)]">
                                 {stock.exch_seg}
                             </span>
                         </div>
-                        <div className="text-xs text-[#868993] mt-1 font-medium tracking-wide">
+                        <div className="text-xs text-[var(--text-muted)] mt-1 font-medium tracking-wide">
                             {stock.symbol}
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1.5 text-[#868993] hover:text-white hover:bg-[#2a2e39] rounded-full transition-colors"
+                        className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-full transition-colors"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Price Section */}
-                <div className="p-6 text-center border-b border-[#2a2e39] bg-[#1e222d]">
+                <div className="p-6 text-center border-b border-[var(--border-primary)] bg-[var(--bg-card)]">
                     <div className={`text-4xl font-bold ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
                         {stock.price || stock.ltp || "0.00"}
                     </div>
@@ -56,45 +56,45 @@ const StockDetailsOverlay = ({ stock, onClose, onBuy, onSell }) => {
                         <span>{stock.change > 0 ? '+' : ''}{stock.change || "0.00"}</span>
                         <span>({stock.percent || "0.00"}%)</span>
                     </div>
-                    <div className="text-[10px] text-[#868993] mt-1">
+                    <div className="text-[10px] text-[var(--text-muted)] mt-1">
                         As on {new Date().toLocaleTimeString()}
                     </div>
                 </div>
 
                 {/* Key Statistics Grid */}
-                <div className="p-6 grid grid-cols-2 gap-y-6 gap-x-8 bg-[#131722]">
-                    <div className="flex justify-between items-center border-b border-[#2a2e39]/30 pb-2">
-                        <span className="text-xs text-[#868993]">Open</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{details.open}</span>
+                <div className="p-6 grid grid-cols-2 gap-y-6 gap-x-8 bg-[var(--bg-main)]">
+                    <div className="flex justify-between items-center border-b border-[var(--border-primary)]/30 pb-2">
+                        <span className="text-xs text-[var(--text-muted)]">Open</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{details.open}</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-[#2a2e39]/30 pb-2">
-                        <span className="text-xs text-[#868993]">Close</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{details.close}</span>
+                    <div className="flex justify-between items-center border-b border-[var(--border-primary)]/30 pb-2">
+                        <span className="text-xs text-[var(--text-muted)]">Close</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{details.close}</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-[#2a2e39]/30 pb-2">
-                        <span className="text-xs text-[#868993]">High</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{details.high}</span>
+                    <div className="flex justify-between items-center border-b border-[var(--border-primary)]/30 pb-2">
+                        <span className="text-xs text-[var(--text-muted)]">High</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{details.high}</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-[#2a2e39]/30 pb-2">
-                        <span className="text-xs text-[#868993]">Low</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{details.low}</span>
+                    <div className="flex justify-between items-center border-b border-[var(--border-primary)]/30 pb-2">
+                        <span className="text-xs text-[var(--text-muted)]">Low</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{details.low}</span>
                     </div>
 
                     <div className="flex justify-between items-center pt-2">
-                        <span className="text-xs text-[#868993]">Volume</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{parseInt(details.volume).toLocaleString()}</span>
+                        <span className="text-xs text-[var(--text-muted)]">Volume</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{parseInt(details.volume).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2">
-                        <span className="text-xs text-[#868993]">Avg. Price</span>
-                        <span className="text-sm font-semibold text-[#e1e4e8]">{details.avgPrice}</span>
+                        <span className="text-xs text-[var(--text-muted)]">Avg. Price</span>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{details.avgPrice}</span>
                     </div>
                 </div>
 
                 {/* Market Depth / Technicals Placeholder */}
-                <div className="flex-1 bg-[#1e222d] p-4 flex flex-col gap-3">
+                <div className="flex-1 bg-[var(--bg-card)] p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#868993] uppercase tracking-wider">Technicals</span>
-                        <span className="text-[10px] text-[#2962ff] cursor-pointer hover:underline">View Charts</span>
+                        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Technicals</span>
+                        <span className="text-[10px] text-[var(--accent-primary)] cursor-pointer hover:underline">View Charts</span>
                     </div>
 
                     {/* Mock Sentiment Bar */}
@@ -109,11 +109,11 @@ const StockDetailsOverlay = ({ stock, onClose, onBuy, onSell }) => {
                             <span className="absolute -top-5 right-0 text-[10px] text-[#089981] opacity-0 group-hover:opacity-100 transition-opacity">Bullish</span>
                         </div>
                     </div>
-                    <div className="text-[10px] text-center text-[#868993] mt-1">Market Sentiment</div>
+                    <div className="text-[10px] text-center text-[var(--text-muted)] mt-1">Market Sentiment</div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-4 bg-[#1e222d] border-t border-[#2a2e39] grid grid-cols-2 gap-4">
+                <div className="p-4 bg-[var(--bg-card)] border-t border-[var(--border-primary)] grid grid-cols-2 gap-4">
                     <button
                         onClick={() => {
                             onBuy(stock);

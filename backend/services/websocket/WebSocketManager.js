@@ -44,7 +44,7 @@ class WebSocketManager {
             await this.webSocket.connect();
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            
+
             logger.success('Connected to Angel One WebSocket');
 
             return { success: true };
@@ -118,7 +118,7 @@ class WebSocketManager {
                 exchangeType: request.exchangeType,
                 tokenCount: request.tokens.length
             });
-            
+
             return { success: true };
         } catch (error) {
             logger.error('Subscription request failed:', error);

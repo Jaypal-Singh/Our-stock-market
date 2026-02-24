@@ -85,14 +85,14 @@ const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, force
         <>
             {/* Header with Watchlist Options & Search Icon */}
             {!isFocused && (
-                <div className="flex items-center justify-between px-4 py-3 bg-[#0b0e14]">
+                <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-main)]">
                     <div className="flex items-baseline gap-2">
-                        <span className="text-xl font-bold text-[#e1e4e8]">Watchlist</span>
-                        <span className="text-xl font-medium text-[#868993]">Options</span>
+                        <span className="text-xl font-bold text-[var(--text-primary)]">Watchlist</span>
+                        <span className="text-xl font-medium text-[var(--text-muted)]">Options</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
-                            className="w-10 h-10 rounded-full bg-[#1e222d] flex items-center justify-center text-[#d1d4dc] border border-[#2a2e39]"
+                            className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] border border-[var(--border-primary)]"
                             onClick={() => setIsFocused(true)}
                         >
                             <Search size={20} />
@@ -103,9 +103,9 @@ const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, force
 
             {/* Full Screen Overlay when Focused */}
             {isFocused && (
-                <div className="fixed inset-0 z-[100] bg-[#0b0e14] flex flex-col">
+                <div className="fixed inset-0 z-[100] bg-[var(--bg-main)] flex flex-col">
                     {/* Header with Input */}
-                    <div className="p-2 border-b border-[#2a2e39] bg-[#0b0e14]">
+                    <div className="p-2 border-b border-[var(--border-primary)] bg-[var(--bg-main)]">
                         <MobileSearchInput
                             query={query}
                             onChange={handleSearch}
@@ -124,8 +124,8 @@ const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, force
                                     key={filter}
                                     onClick={() => setActiveFilter(filter)}
                                     className={`whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${activeFilter === filter
-                                        ? "bg-[#2962ff] text-white"
-                                        : "bg-[#1e222d] text-[#868993] border border-[#2a2e39]"
+                                        ? "bg-[var(--accent-primary)] text-white"
+                                        : "bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border-primary)]"
                                         }`}
                                 >
                                     {filter}
@@ -135,7 +135,7 @@ const MobileSearchContainer = ({ onAddStock, onSelectStock, onBuy, onSell, force
                     </div>
 
                     {/* Results Area */}
-                    <div className="flex-1 overflow-y-auto customscrollbar bg-[#0b0e14]">
+                    <div className="flex-1 overflow-y-auto customscrollbar bg-[var(--bg-main)]">
                         <MobileSearchResultsList
                             results={filteredResults}
                             isLoading={isLoading}

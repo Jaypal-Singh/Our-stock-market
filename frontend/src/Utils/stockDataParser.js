@@ -12,28 +12,20 @@ export function parseTickData(tickData) {
     try {
         if (!tickData) return null;
 
-        console.log('🔍 Parsing tick data:', {
-            type: typeof tickData,
-            length: tickData?.length,
-            isString: typeof tickData === 'string',
-            isObject: typeof tickData === 'object',
-            content: tickData
-        });
-
         // Handle object format (Angel One sends parsed data as objects)
         if (typeof tickData === 'object' && !ArrayBuffer.isView(tickData) && !(tickData instanceof ArrayBuffer)) {
             // Check if it has the expected properties from Angel One
             if (tickData.content && typeof tickData.content === 'object') {
                 const data = tickData.content;
-                
+
                 // Remove quotes from token if present
                 const token = data.token ? data.token.replace(/"/g, '') : null;
-                
+
                 if (!token) {
                     console.warn('No token in tick data');
                     return null;
                 }
-                
+
                 // Angel One prices are in paise (100x), need to divide by 100
                 const parsed = {
                     token: token,
@@ -45,20 +37,20 @@ export function parseTickData(tickData) {
                     volume: parseInt(data.vol_traded) || 0,
                     timestamp: Date.now()
                 };
-                
+
                 console.log('✅ Parsed tick data (object format):', parsed);
                 return parsed;
             }
-            
+
             // Direct object format (without content wrapper)
             if (tickData.token || tickData.last_traded_price) {
                 const token = tickData.token ? tickData.token.replace(/"/g, '') : null;
-                
+
                 if (!token) {
                     console.warn('No token in direct tick data');
                     return null;
                 }
-                
+
                 const parsed = {
                     token: token,
                     ltp: (parseFloat(tickData.last_traded_price) || 0) / 100,
@@ -69,7 +61,7 @@ export function parseTickData(tickData) {
                     volume: parseInt(tickData.vol_traded) || 0,
                     timestamp: Date.now()
                 };
-                
+
                 console.log('✅ Parsed tick data (direct object):', parsed);
                 return parsed;
             }
@@ -86,10 +78,10 @@ export function parseTickData(tickData) {
         // Low: 4 bytes
         // Close: 4 bytes
         // Volume: 8 bytes
-        
+
         // Convert to ArrayBuffer if needed
         let arrayBuffer;
-        
+
         if (typeof tickData === 'string') {
             // If it's a string, convert to bytes
             const encoder = new TextEncoder();
@@ -107,7 +99,7 @@ export function parseTickData(tickData) {
             console.warn('Unknown tick data format:', typeof tickData);
             return null;
         }
-        
+
         if (arrayBuffer.byteLength < 32) {
             console.warn('Tick data too short:', arrayBuffer.byteLength, 'bytes. Expected at least 32 bytes.');
             // Try to parse what we have
@@ -115,9 +107,9 @@ export function parseTickData(tickData) {
                 const view = new DataView(arrayBuffer);
                 const token = view.getUint32(0, false);
                 const ltp = arrayBuffer.byteLength >= 8 ? view.getUint32(4, false) / 100 : 0;
-                
+
                 console.log('Partial parse:', { token, ltp });
-                
+
                 return {
                     token: token.toString(),
                     ltp,
@@ -134,7 +126,7 @@ export function parseTickData(tickData) {
 
         // Use DataView for reading binary data (browser-compatible)
         const view = new DataView(arrayBuffer);
-        
+
         // Parse the binary data (Big Endian)
         const token = view.getUint32(0, false); // false = big endian
         const ltp = view.getUint32(4, false) / 100; // Angel One sends price * 100
@@ -154,9 +146,9 @@ export function parseTickData(tickData) {
             volume: Number(volume),
             timestamp: Date.now()
         };
-        
+
         console.log('✅ Parsed tick data (binary format):', parsed);
-        
+
         return parsed;
     } catch (error) {
         console.error('Error parsing tick data:', error);
@@ -170,23 +162,52 @@ export function parseTickData(tickData) {
  * @param {Object} parsedTick - Parsed tick data
  * @returns {Array} - Updated stocks array
  */
+/**
+ * Update stock price in the stocks array
+ * @param {Array} prevStocks - Previous stocks array
+ * @param {Object} parsedTick - Parsed tick data
+ * @returns {Array} - Updated stocks array
+ */
 export function updateStockPrice(prevStocks, parsedTick) {
     if (!parsedTick || !parsedTick.token) {
         return prevStocks;
     }
+    // Reuse the bulk update logic for single tick
+    return updateStocksWithTicks(prevStocks, [parsedTick]);
+}
+
+/**
+ * Update multiple stocks with an array of ticks
+ * @param {Array} prevStocks - Previous stocks array
+ * @param {Array} ticks - Array of parsed tick objects
+ * @returns {Array} - Updated stocks array
+ */
+export function updateStocksWithTicks(prevStocks, ticks) {
+    if (!ticks || ticks.length === 0) return prevStocks;
+
+    // Create a map of latest ticks by token for O(1) lookup
+    const tickMap = new Map();
+    ticks.forEach(tick => {
+        if (tick && tick.token) {
+            tickMap.set(tick.token, tick);
+        }
+    });
+
+    if (tickMap.size === 0) return prevStocks;
 
     return prevStocks.map(stock => {
-        if (stock.token === parsedTick.token) {
+        const parsedTick = tickMap.get(stock.token);
+
+        if (parsedTick) {
             const currentPrice = parsedTick.ltp;
-            
+
             // For first update, use current LTP as close price (baseline)
-            // This happens when market opens or first data arrives
             const baselineClose = stock.close || currentPrice;
-            
+
             // Calculate change from baseline close price
             const change = currentPrice - baselineClose;
-            const changePercent = baselineClose && baselineClose > 0 
-                ? ((change / baselineClose) * 100) 
+            const changePercent = baselineClose && baselineClose > 0
+                ? ((change / baselineClose) * 100)
                 : 0;
 
             return {

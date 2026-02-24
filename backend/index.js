@@ -1,3 +1,4 @@
+console.log('--- BACKEND STARTING ---');
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -14,6 +15,8 @@ import watchlistRoute from './routes/watchlistRoutes.js'
 import stockRoutes from './routes/stockRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import positionRoutes from './routes/positionRoutes.js';
+import optionChainRoutes from './routes/optionChainRoutes.js';
+import portfolioRoutes from './routes/portfolioRoutes.js';
 import startAngelLoginCron from './cron/angelLoginCron.js';
 import fetchInstruments from './cron/fetchInstrumentsCron.js';
 import { createLogger } from './utils/logger.js';
@@ -79,6 +82,8 @@ app.use('/api/watchlist', watchlistRoute);
 app.use('/api/stock', stockRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/position', positionRoutes);
+app.use('/api/option-chain', optionChainRoutes);
+app.use('/api/portfolio', portfolioRoutes);
 
 
 

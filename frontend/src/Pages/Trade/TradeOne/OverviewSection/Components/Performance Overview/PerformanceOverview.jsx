@@ -2,13 +2,13 @@ import React from "react";
 
 function PerformanceOverview() {
   return (
-    <div className="bg-[#131722] p-4 rounded-lg border border-[#2a2e39] space-y-6">
-      <h3 className="text-sm font-bold text-[#d1d4dc]">Performance Overview</h3>
+    <div className="bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)] space-y-6">
+      <h3 className="text-sm font-bold text-[var(--text-primary)]">Performance Overview</h3>
 
       {/* Top Metrics */}
       <div className="grid grid-cols-5 gap-4 py-2">
         <div>
-          <p className="text-[10px] text-[#868993]">Short Term</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Short Term</p>
           <p className="text-[#f23645] text-xs font-bold">Very Negative</p>
         </div>
         <div>
@@ -30,7 +30,7 @@ function PerformanceOverview() {
       </div>
 
       {/* Ranks Section */}
-      <div className="grid grid-cols-2 gap-8 pt-4 border-t border-[#2a2e39]">
+      <div className="grid grid-cols-2 gap-8 pt-4 border-t border-[var(--border-primary)]">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-xs">Quality</span>
@@ -51,12 +51,12 @@ function PerformanceOverview() {
             </span>
           </div>
         </div>
-        <div className="bg-[#1c202b] p-3 rounded text-[11px] text-[#868993]">
+        <div className="bg-[var(--bg-secondary)] p-3 rounded text-[11px] text-[var(--text-muted)]">
           <p>
             • Below Average quality company basis long term financial
             performance.
           </p>
-          <p className="mt-2 text-white font-semibold">
+          <p className="mt-2 text-[var(--text-primary)] font-semibold">
             Size - Ranks 9th out of 34 companies in sector.
           </p>
         </div>

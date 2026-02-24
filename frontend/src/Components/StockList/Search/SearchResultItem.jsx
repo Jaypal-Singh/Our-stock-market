@@ -8,29 +8,29 @@ import { Plus } from "lucide-react";
 const SearchResultItem = ({ result, onSelect, onAdd, onBuy, onSell }) => {
     // Determine avatar text based on instrument type
     const avatarText = result.instrumenttype === 'FUTSTK' || result.instrumenttype === 'FUTIDX' ? 'FO' : 'EQ';
-    const avatarColor = avatarText === 'FO' ? 'text-[#f7931a] bg-[#f7931a]/10' : 'text-[#2962ff] bg-[#2962ff]/10';
+    const avatarColor = avatarText === 'FO' ? 'text-[#f7931a] bg-[#f7931a]/10' : 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10';
 
     return (
         <div
-            className="group px-4 py-3 hover:bg-[#1e222d] cursor-pointer flex justify-between items-center border-b border-[#2a2e39]/30 last:border-none transition-colors"
+            className="group px-4 py-3 hover:bg-[var(--bg-secondary)] cursor-pointer flex justify-between items-center border-b border-[var(--border-primary)]/30 last:border-none transition-colors"
             onClick={() => onSelect(result)}
         >
             {/* Left: Symbol Info */}
             <div className="flex items-center gap-3">
                 {/* Avatar Badge */}
-                <div className={`w-8 h-8 rounded-full border border-[#2a2e39] flex items-center justify-center text-[10px] font-bold ${avatarColor}`}>
+                <div className={`w-8 h-8 rounded-full border border-[var(--border-primary)] flex items-center justify-center text-[10px] font-bold ${avatarColor}`}>
                     {avatarText}
                 </div>
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-[#e1e4e8] group-hover:text-white">
+                        <span className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--text-primary)]">
                             {result.name}
                         </span>
-                        <span className="text-[9px] bg-[#2a2e39] text-[#868993] px-1 py-0.5 rounded leading-none border border-[#363a45]">
+                        <span className="text-[9px] bg-[var(--bg-secondary)] text-[var(--text-muted)] px-1 py-0.5 rounded leading-none border border-[var(--border-primary)]">
                             {result.exch_seg}
                         </span>
                     </div>
-                    <div className="text-[11px] text-[#868993] mt-0.5 truncate max-w-[180px]">
+                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5 truncate max-w-[180px]">
                         {result.symbol}
                     </div>
                 </div>
@@ -59,7 +59,7 @@ const SearchResultItem = ({ result, onSelect, onAdd, onBuy, onSell }) => {
                     S
                 </button>
                 <button
-                    className="w-7 h-7 flex items-center justify-center text-[#868993] hover:text-[#2962ff] hover:bg-[#2962ff]/10 rounded transition-all"
+                    className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10 rounded transition-all"
                     onClick={(e) => {
                         e.stopPropagation();
                         onAdd(result);

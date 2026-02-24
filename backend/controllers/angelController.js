@@ -36,7 +36,7 @@ const generateTOTP = (secret) => {
     const epoch = Math.floor(Date.now() / 1000);
     const timeStep = 30;
     const counter = Math.floor(epoch / timeStep);
-    
+
     const buffer = Buffer.alloc(8);
     buffer.writeBigInt64BE(BigInt(counter), 0);
 
@@ -63,17 +63,17 @@ const generateTOTP = (secret) => {
  */
 const performAngelLogin = async () => {
     let credentialDoc = await AngelOneCredential.findOne();
-    
+
     // Fallback to env variables if not found in DB
     if (!credentialDoc || !credentialDoc.angel_totp_key) {
         console.log("No valid Angel Credential in DB. Checking .env...");
-        
+
         if (credentialDoc) {
             await AngelOneCredential.deleteOne({ _id: credentialDoc._id });
         }
 
         const { ANGEL_CLIENT_ID, ANGEL_PASSWORD, ANGEL_TOTP_KEY, ANGEL_API_KEY } = process.env;
-        
+
         if (!ANGEL_CLIENT_ID || !ANGEL_PASSWORD || !ANGEL_TOTP_KEY || !ANGEL_API_KEY) {
             throw new Error('Angel One credentials not found in DB or ENV');
         }
@@ -109,7 +109,7 @@ const performAngelLogin = async () => {
         credentialDoc.refreshToken = data.data.refreshToken;
         credentialDoc.token_expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await credentialDoc.save();
-        
+
         console.log("✅ Login successful! Tokens saved to DB");
 
         return {
@@ -134,7 +134,7 @@ const performAngelLogin = async () => {
 export const loginAngelOne = async (req, res) => {
     try {
         const result = await performAngelLogin();
-        
+
         return res.status(200).json({
             status: true,
             message: "Login Successful",
@@ -146,9 +146,9 @@ export const loginAngelOne = async (req, res) => {
 
     } catch (error) {
         console.error("❌ Angel Login Error:", error);
-        res.status(500).json({ 
-            status: false, 
-            message: error.message || "Login failed" 
+        res.status(500).json({
+            status: false,
+            message: error.message || "Login failed"
         });
     }
 };
@@ -267,7 +267,7 @@ export const getMarketStatus = async (req, res) => {
     try {
         const { getMarketStatus: getStatus } = await import('../utils/marketHours.js');
         const status = getStatus();
-        
+
         res.json({
             success: true,
             data: status
@@ -288,7 +288,7 @@ export const getMarketStatus = async (req, res) => {
 export const getStockQuotes = async (req, res) => {
     try {
         const { tokens } = req.body;
-        
+
         if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -298,7 +298,7 @@ export const getStockQuotes = async (req, res) => {
 
         // Get credentials
         const credentials = await getSessionCredentials();
-        
+
         // Initialize/Update REST API with fresh credentials
         const restAPI = (await import('../services/angelOneRestAPI.js')).default;
         await restAPI.initialize(credentials);
@@ -329,7 +329,7 @@ export const getStockQuotes = async (req, res) => {
 export const searchInstruments = async (req, res) => {
     try {
         const { query } = req.query;
-        
+
         if (!query || query.length < 2) {
             return res.status(400).json({
                 success: false,
@@ -339,15 +339,15 @@ export const searchInstruments = async (req, res) => {
 
         // Case insensitive search
         const regex = new RegExp(query, 'i');
-        
+
         const instruments = await Instrument.find({
             $or: [
                 { name: regex },
                 { symbol: regex }
             ]
         })
-        .select('name symbol token exch_seg instrumenttype')
-        .limit(20);
+            .select('name symbol token exch_seg instrumenttype')
+            .limit(20);
 
         res.json({
             success: true,

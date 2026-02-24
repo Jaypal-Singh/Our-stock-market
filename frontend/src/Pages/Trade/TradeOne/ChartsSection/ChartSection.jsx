@@ -22,7 +22,7 @@ function ChartSection() {
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes('/trade/chart');
 
-  const [interval, setInterval] = React.useState('FIVE_MINUTE');
+  const [interval, setInterval] = React.useState('ONE_MINUTE');
   const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
 
   const intervals = [
@@ -34,7 +34,7 @@ function ChartSection() {
     { label: '1d', value: 'ONE_DAY' },
   ];
 
-  const currentIntervalLabel = intervals.find(i => i.value === interval)?.label || '5m';
+  const currentIntervalLabel = intervals.find(i => i.value === interval)?.label || '1m';
 
   const [hoveredCandle, setHoveredCandle] = React.useState(null);
 
@@ -58,22 +58,22 @@ function ChartSection() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-[#131722] text-[#d1d4dc]">
+    <div className="flex flex-col h-full bg-[var(--bg-main)] text-[var(--text-secondary)]">
 
       {/* Mobile Header */}
       {isMobileView && (
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#0b0e14] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="text-[#d1d4dc]">
+            <button onClick={() => navigate(-1)} className="text-[var(--text-secondary)]">
               <ArrowLeft size={24} />
             </button>
             <div>
-              <h1 className="text-white text-lg font-bold uppercase">{stock?.name || "CHART"}</h1>
+              <h1 className="text-[var(--text-primary)] text-lg font-bold uppercase">{stock?.name || "CHART"}</h1>
               {stock && (
                 <div className="text-[10px] font-bold flex items-center gap-1">
-                  <span className="text-[#868993]">{stock.exchange}</span>
-                  <span className="text-[#d1d4dc]">•</span>
-                  <span className="text-white">₹{stock.price}</span>
+                  <span className="text-[var(--text-muted)]">{stock.exchange}</span>
+                  <span className="text-[var(--text-secondary)]">•</span>
+                  <span className="text-[var(--text-primary)]">₹{stock.price}</span>
                   <span className={stock.isUp ? 'text-[#089981]' : 'text-[#f23645]'}>{stock.percent}%</span>
                 </div>
               )}
@@ -83,16 +83,16 @@ function ChartSection() {
           <div className="relative">
             <button
               onClick={() => setShowIntervalMenu(!showIntervalMenu)}
-              className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-[#2a2e39] rounded"
+              className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded"
             >
               {currentIntervalLabel} <ChevronDown size={12} />
             </button>
             {showIntervalMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-[#1c202b] border border-[#2a2e39] rounded shadow-xl z-50 py-1 min-w-[80px]">
+              <div className="absolute right-0 top-full mt-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded shadow-xl z-50 py-1 min-w-[80px]">
                 {intervals.map(opt => (
                   <div
                     key={opt.value}
-                    className={`px-3 py-2 text-xs cursor-pointer hover:bg-[#2a2e39] ${interval === opt.value ? 'text-[#2962ff]' : 'text-[#d1d4dc]'}`}
+                    className={`px-3 py-2 text-xs cursor-pointer hover:bg-[var(--bg-secondary)] ${interval === opt.value ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`}
                     onClick={() => {
                       setInterval(opt.value);
                       setShowIntervalMenu(false);
@@ -109,22 +109,22 @@ function ChartSection() {
 
       {/* Upper Toolbar - Desktop Only */}
       {!isMobileView && (
-        <div className="flex items-center justify-between p-1 border-b border-[#2a2e39] bg-[#1c202b]">
+        <div className="flex items-center justify-between p-1 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
           <div className="flex items-center gap-3 px-2">
             {/* Desktop Interval Selector */}
             <div className="relative">
               <div
-                className="flex items-center gap-1 text-xs font-bold border-r border-[#2a2e39] pr-3 cursor-pointer hover:text-white"
+                className="flex items-center gap-1 text-xs font-bold border-r border-[var(--border-primary)] pr-3 cursor-pointer hover:text-[var(--text-primary)]"
                 onClick={() => setShowIntervalMenu(!showIntervalMenu)}
               >
                 {currentIntervalLabel} <ChevronDown size={10} />
               </div>
               {showIntervalMenu && (
-                <div className="absolute left-0 top-full mt-2 bg-[#1c202b] border border-[#2a2e39] rounded shadow-xl z-50 py-1 min-w-[80px]">
+                <div className="absolute left-0 top-full mt-2 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded shadow-xl z-50 py-1 min-w-[80px]">
                   {intervals.map(opt => (
                     <div
                       key={opt.value}
-                      className={`px-4 py-2 text-xs cursor-pointer hover:bg-[#2a2e39] ${interval === opt.value ? 'text-[#2962ff]' : ''}`}
+                      className={`px-4 py-2 text-xs cursor-pointer hover:bg-[var(--bg-secondary)] ${interval === opt.value ? 'text-[var(--accent-primary)]' : ''}`}
                       onClick={() => {
                         setInterval(opt.value);
                         setShowIntervalMenu(false);
@@ -137,29 +137,29 @@ function ChartSection() {
               )}
             </div>
 
-            <div className="flex gap-4 items-center text-[#868993]">
-              <span className="flex items-center gap-1 text-[11px] hover:text-white cursor-pointer">
+            <div className="flex gap-4 items-center text-[var(--text-muted)]">
+              <span className="flex items-center gap-1 text-[11px] hover:text-[var(--text-primary)] cursor-pointer">
                 Indicators
               </span>
-              <div className="h-4 w-[1px] bg-[#2a2e39]"></div>
+              <div className="h-4 w-[1px] bg-[var(--border-primary)]"></div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px]">Instant Orders</span>
-                <div className="w-7 h-4 bg-[#434651] rounded-full relative">
-                  <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
+                <div className="w-10 h-5 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-full relative">
+                  <div className="absolute right-1 top-1 w-2.5 h-2.5 bg-[var(--accent-primary)] rounded-full"></div>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4 px-2">
-            <div className="flex gap-3 text-[#868993]">
+            <div className="flex gap-3 text-[var(--text-muted)]">
               <Undo2 size={16} className="cursor-not-allowed" />
               <Redo2 size={16} className="cursor-not-allowed" />
             </div>
-            <div className="flex items-center gap-2 text-[#2962ff] text-[10px] font-bold border border-[#2a2e39] px-2 py-1 rounded">
+            <div className="flex items-center gap-2 text-[var(--accent-primary)] text-[10px] font-bold border border-[var(--border-primary)] px-2 py-1 rounded">
               SCALPER MODE <Maximize2 size={12} />
             </div>
-            <div className="flex items-center gap-2 text-[#868993]">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
               <Save size={16} />
               <Settings size={16} />
               <Camera size={16} />
@@ -171,21 +171,21 @@ function ChartSection() {
 
 
       {!isMobileView && stock && (
-        <div className="flex items-center p-2 text-[12px] border-b border-[#2a2e39]">
-          <span className="font-bold text-white mr-2 uppercase">
+        <div className="flex items-center p-2 text-[12px] border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+          <span className="font-bold text-[var(--text-primary)] mr-2 uppercase">
             {stock.name} • {stock.exch_seg || stock.exchange}
           </span>
           <div className="flex gap-2">
-            <span className="text-[#868993]">
+            <span className="text-[var(--text-muted)]">
               O<span className={textColor}>{displayOpen}</span>
             </span>
-            <span className="text-[#868993]">
+            <span className="text-[var(--text-muted)]">
               H<span className={textColor}>{displayHigh}</span>
             </span>
-            <span className="text-[#868993]">
+            <span className="text-[var(--text-muted)]">
               L<span className={textColor}>{displayLow}</span>
             </span>
-            <span className="text-[#868993]">
+            <span className="text-[var(--text-muted)]">
               C<span className={textColor}>{displayClose}</span>
             </span>
             {!hoveredCandle && (
@@ -203,7 +203,7 @@ function ChartSection() {
       )}
 
       {/* Main Chart Area */}
-      <div className="relative flex-1 bg-[#131722] overflow-hidden">
+      <div className="relative flex-1 bg-[var(--bg-main)] overflow-hidden">
         {stock ? (
           <TradingViewChart
             stock={stock}
@@ -211,7 +211,7 @@ function ChartSection() {
             onCrosshairMove={handleCrosshairMove}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-500">
+          <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
             Select a stock to view chart
           </div>
         )}
@@ -222,7 +222,7 @@ function ChartSection() {
           <div className="bg-[#089981] text-white px-3 py-1.5 rounded-l text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
             BUY @ {stock?.price || "0.00"}
           </div>
-          <div className="bg-[#2a2e39] text-white border-x border-black/20 px-2 py-1.5 text-[11px]">
+          <div className="bg-[var(--bg-secondary)] text-[var(--text-primary)] border-x border-[var(--border-primary)] px-2 py-1.5 text-[11px]">
             1
           </div>
           <div className="bg-[#f23645] text-white px-3 py-1.5 rounded-r text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
@@ -233,22 +233,15 @@ function ChartSection() {
 
       {/* Footer Info Bar */}
       {!isMobileView && (
-        <div className="flex items-center justify-between p-1 bg-[#1c202b] text-[#868993] text-[10px] border-t border-[#2a2e39]">
-          <div className="flex gap-3 px-2">
-            <span>1D</span>
-            <span>5D</span>
-            <span>1M</span>
-            <span>3M</span>
-            <span>1Y</span>
-            <span>5Y</span>
-          </div>
+        <div className="flex items-center justify-between p-1 bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[10px] border-t border-[var(--border-primary)]">
+
           <div className="flex gap-4 px-2 items-center">
-            <span className="text-white">17:33:28 (UTC+5:30)</span>
-            <div className="flex gap-2">
-              <span>%</span>
-              <span>log</span>
-              <span className="text-[#2962ff]">auto</span>
-            </div>
+
+            <span className="text-[var(--text-primary)]">
+              {new Date().toLocaleTimeString('en-GB', { hour12: false })} (UTC+5:30)
+            </span>
+
+
           </div>
         </div>
       )}

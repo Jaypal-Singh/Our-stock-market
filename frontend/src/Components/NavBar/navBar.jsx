@@ -1,15 +1,34 @@
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bell, ChevronDown, Home, Triangle } from "lucide-react";
+import MarketIndicesStrip from "../Common/MarketIndicesStrip";
 
 function NavBar() {
     const location = useLocation();
+    const [userInfo, setUserInfo] = useState(() =>
+        JSON.parse(localStorage.getItem("userInfo") || "{}")
+    );
+
+    useEffect(() => {
+        const handleUpdate = () => {
+            setUserInfo(JSON.parse(localStorage.getItem("userInfo") || "{}"));
+        };
+
+        window.addEventListener('userInfoUpdated', handleUpdate);
+        window.addEventListener('storage', handleUpdate);
+
+        return () => {
+            window.removeEventListener('userInfoUpdated', handleUpdate);
+            window.removeEventListener('storage', handleUpdate);
+        };
+    }, []);
 
     const isActive = (path) => {
-        return location.pathname === path ? "text-blue-400 font-semibold" : "text-gray-400 hover:text-white";
+        return location.pathname === path ? "text-[var(--accent-primary)] font-semibold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]";
     };
 
     return (
-        <div className="bg-[#0b0e14] border-b border-gray-800 h-13 flex items-center justify-between px-6 select-none font-sans">
+        <div className="bg-[var(--bg-main)] border-b border-[var(--border-primary)] h-13 flex items-center justify-between px-6 select-none font-sans">
             {/* Left Section: Logo & Indices */}
             <div className="flex items-center gap-8">
                 {/* Logo */}
@@ -19,31 +38,9 @@ function NavBar() {
                     </div>
                 </div>
 
-                {/* Indices */}
-                <div className="hidden md:flex items-center gap-8 text-sm">
-                    {/* NIFTY */}
-                    <div className="flex flex-col leading-tight">
-                        <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-200">NIFTY</span>
-                            <span className="bg-red-900/30 text-[10px] text-red-500 px-1 py-0.5 rounded font-bold tracking-wider">EXPIRY</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-green-500 font-semibold">25,935.15</span>
-                            <span className="text-xs text-gray-500">▲ 67.85 (0.26%)</span>
-                        </div>
-                    </div>
-
-                    {/* BANKNIFTY */}
-                    <div className="flex flex-col leading-tight">
-                        <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-200">BANKNIFTY</span>
-                            <ChevronDown size={14} className="text-gray-500" />
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-red-500 font-semibold">60,626.40</span>
-                            <span className="text-xs text-gray-500">▼ -42.95 (-0.07%)</span>
-                        </div>
-                    </div>
+                {/* Live Indices */}
+                <div className="hidden md:flex">
+                    <MarketIndicesStrip variant="desktop" />
                 </div>
             </div>
 
@@ -58,17 +55,25 @@ function NavBar() {
 
 
                 {/* Divider */}
-                <div className="h-4 w-px bg-gray-700 mx-2"></div>
+                <div className="h-4 w-px bg-[var(--border-primary)] mx-2"></div>
 
                 {/* Notifications */}
-                <button className="text-gray-400 hover:text-white transition-colors">
+                <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
                     <Bell size={18} />
                 </button>
 
                 {/* Profile */}
                 <Link to="/trade/accounts">
-                    <div className="w-8 h-8 rounded-full bg-blue-900/40 text-blue-400 flex items-center justify-center font-medium text-xs border border-blue-800/50 cursor-pointer hover:bg-blue-900/60 transition-colors">
-                        JS
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center font-medium text-xs border border-[var(--accent-primary)]/30 cursor-pointer hover:bg-[var(--accent-primary)]/20 transition-colors overflow-hidden">
+                        {userInfo.profilePic ? (
+                            <img src={userInfo.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            (() => {
+                                const name = userInfo.name || "User";
+                                const parts = name.split(' ');
+                                return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+                            })()
+                        )}
                     </div>
                 </Link>
             </div>

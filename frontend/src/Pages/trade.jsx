@@ -14,6 +14,7 @@ import MobileSellOrder from "../Components/Mobile/MobileStockDetails/MobileOrder
 import OptionChainSection from "./Trade/TradeOne/OptionChainSection/OptionChainSection";
 import ChartSection from "./Trade/TradeOne/ChartsSection/ChartSection";
 import MobileStockManager from "../Components/Mobile/MobileWatchlist/MobileStockManager/MobileStockManager";
+import Profile from "./Trade/Accounts/Profile/Profile";
 
 function Trade() {
     const location = useLocation();
@@ -25,22 +26,22 @@ function Trade() {
         location.pathname.includes('manage-stocks');
 
     return (
-        <div className="h-screen flex flex-col bg-black">
+        <div className="h-screen flex flex-col bg-[var(--bg-main)]">
             {/* Desktop View */}
             <div className="hidden md:flex flex-col h-full">
                 <NavBar />
                 <div className="flex flex-1 overflow-hidden p-2 gap-2">
-                    <div className="w-1/4 h-full rounded-lg border border-[#2a2e39] overflow-hidden">
+                    <div className="w-1/4 h-full rounded-lg border border-[var(--border-primary)] overflow-hidden">
                         <StockList />
                     </div>
-                    <div className="flex-1 bg-[#0b0e14] rounded-lg border border-[#2a2e39] overflow-hidden">
+                    <div className="flex-1 bg-[var(--bg-main)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
                         <TradeRoute />
                     </div>
                 </div>
             </div>
 
             {/* Mobile View */}
-            <div className="md:hidden flex flex-col h-full bg-[#0b0e14] overflow-hidden">
+            <div className="md:hidden flex flex-col h-full bg-[var(--bg-main)] overflow-hidden">
                 <div className="flex-1 overflow-hidden">
                     <Routes>
                         <Route path="/" element={<Navigate to="watchlist" replace />} />
@@ -55,6 +56,7 @@ function Trade() {
                         <Route path="option-chain" element={<OptionChainSection />} />
                         <Route path="chart" element={<ChartSection />} />
                         <Route path="manage-stocks" element={<MobileStockManager />} />
+                        <Route path="profile" element={<Profile />} />
                         <Route path="*" element={<Navigate to="watchlist" replace />} />
                     </Routes>
                 </div>

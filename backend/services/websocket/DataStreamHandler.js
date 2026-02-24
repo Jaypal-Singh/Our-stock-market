@@ -52,7 +52,7 @@ class DataStreamHandler {
      */
     handleError(error) {
         logger.error('WebSocket Error:', error);
-        
+
         if (this.socketIO) {
             this.socketIO.emit('websocket_error', {
                 message: error.message || 'WebSocket error occurred',
@@ -66,7 +66,7 @@ class DataStreamHandler {
      */
     handleDisconnect() {
         logger.warn('WebSocket disconnected');
-        
+
         if (this.socketIO) {
             this.socketIO.emit('websocket_disconnected', {
                 timestamp: Date.now()

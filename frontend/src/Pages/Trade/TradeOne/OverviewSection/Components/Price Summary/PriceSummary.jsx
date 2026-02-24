@@ -17,21 +17,21 @@ function PriceSummary() {
       <div className="flex justify-between items-center">
         <h3 className="text-sm font-bold">Price Summary</h3>
         <div className="flex gap-2">
-          <ChevronLeft size={16} className="text-[#868993] cursor-pointer" />
-          <ChevronRight size={16} className="text-[#868993] cursor-pointer" />
+          <ChevronLeft size={16} className="text-[var(--text-muted)] cursor-pointer" />
+          <ChevronRight size={16} className="text-[var(--text-muted)] cursor-pointer" />
         </div>
       </div>
       <div className="flex gap-4 overflow-x-auto no-scrollbar">
         {summaries.map((item, i) => (
           <div
             key={i}
-            className="min-w-[220px] bg-[#131722] p-4 rounded-lg border border-[#2a2e39]"
+            className="min-w-[220px] bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)]"
           >
             <TrendingDown className="text-[#f23645] mb-2" size={18} />
-            <p className="text-[12px] font-bold text-white mb-1">
+            <p className="text-[12px] font-bold text-[var(--text-primary)] mb-1">
               {item.title}
             </p>
-            <p className="text-[10px] text-[#868993] leading-relaxed">
+            <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
               {item.desc}
             </p>
           </div>

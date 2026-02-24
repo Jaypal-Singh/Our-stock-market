@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Minus, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { placeOrder } from '../../../../services/angelOneService';
+import { useToast } from '../../../../context/ToastContext';
 
 const MobileSellOrder = () => {
+    const { showToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
     const stock = location.state?.stock || {
@@ -19,6 +22,7 @@ const MobileSellOrder = () => {
     const [quantity, setQuantity] = useState(1);
     const [price, setPrice] = useState(stock.price);
     const [orderType, setOrderType] = useState('Market');
+    const [isLoading, setIsLoading] = useState(false);
 
     // Update price when stock changes
     useEffect(() => {
@@ -43,25 +47,72 @@ const MobileSellOrder = () => {
         });
     };
 
+    const handleSell = async () => {
+        try {
+            if (quantity <= 0) {
+                showToast("Please enter a valid quantity", "error");
+                return;
+            }
+
+            setIsLoading(true);
+
+            // Get User ID from localStorage
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : "unknown_user";
+
+            const orderData = {
+                variety: "NORMAL",
+                tradingsymbol: stock.symbol || stock.name,
+                symboltoken: stock.token,
+                transactiontype: "SELL",
+                exchange: stock.exchange || "NSE",
+                ordertype: orderType === 'Market' ? "MARKET" : "LIMIT",
+                producttype: productType === "Intraday" ? "INTRADAY" : "DELIVERY",
+                duration: "DAY",
+                price: orderType === 'Market' ? 0 : price,
+                marketPrice: stock.price, // Capture current market price
+                quantity: quantity,
+                userId: userId
+            };
+
+            const response = await placeOrder(orderData);
+
+            if (response.success) {
+                showToast(`Sell Order Placed! ID: ${response.data.angelOrderId}`, "success");
+                const targetTab = orderType === 'Market' ? 'Order History' : 'Open Orders';
+                navigate('/trade/orders', { state: { activeTab: targetTab, refresh: Date.now() } });
+            } else {
+                showToast(`Order Failed: ${response.message || 'Unknown error'}`, "error");
+            }
+
+        } catch (error) {
+            console.error("Order Execution Error:", error);
+            showToast("Failed to place order", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <div className="h-full flex flex-col bg-[#0b0e14] text-[#d1d4dc] font-sans overflow-hidden">
+        <div className="h-full flex flex-col bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#14161f]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="text-[#d1d4dc]">
+                    <button onClick={() => navigate(-1)} className="text-[var(--text-secondary)]">
                         <ArrowLeft size={24} />
                     </button>
                     <div>
-                        <h1 className="text-white text-lg font-bold uppercase">{stock.name}</h1>
+                        <h1 className="text-[var(--text-primary)] text-lg font-bold uppercase">{stock.name}</h1>
                         <div className="text-[10px] font-bold flex items-center gap-1">
-                            <span className="text-[#868993]">{stock.exchange}</span>
-                            <span className="text-[#d1d4dc]">•</span>
-                            <span className="text-white">₹{stock.price}</span>
+                            <span className="text-[var(--text-muted)]">{stock.exchange}</span>
+                            <span className="text-[var(--text-secondary)]">•</span>
+                            <span className="text-[var(--text-primary)]">₹{stock.price}</span>
                             <span className={stock.isUp ? 'text-[#089981]' : 'text-[#f23645]'}>{stock.percent}%</span>
                         </div>
                     </div>
                 </div>
-                <button className="text-[#d1d4dc]">
+                <button className="text-[var(--text-secondary)]">
                     <Settings size={20} />
                 </button>
             </div>
@@ -74,7 +125,7 @@ const MobileSellOrder = () => {
                         onClick={() => setProductType('Delivery')}
                         className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border rounded transition-colors ${productType === 'Delivery'
                             ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
-                            : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
+                            : 'border-[var(--border-primary)] text-[var(--text-muted)] bg-[var(--bg-card)]'
                             }`}
                     >
                         Delivery
@@ -83,7 +134,7 @@ const MobileSellOrder = () => {
                         onClick={() => setProductType('Intraday')}
                         className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border rounded transition-colors ${productType === 'Intraday'
                             ? 'border-[#f23645] bg-[#f23645]/10 text-[#f23645]'
-                            : 'border-[#2a2e39] text-[#868993] bg-[#1e2330]'
+                            : 'border-[var(--border-primary)] text-[var(--text-muted)] bg-[var(--bg-card)]'
                             }`}
                     >
                         Intraday
@@ -91,12 +142,12 @@ const MobileSellOrder = () => {
                 </div>
 
                 {/* Quantity Input */}
-                <div className="mb-6 bg-[#1e2330] p-4 rounded-lg border border-[#2a2e39]">
-                    <label className="text-[10px] font-bold text-[#868993] uppercase mb-4 block">No. of Shares</label>
+                <div className="mb-6 bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)]">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-4 block">No. of Shares</label>
                     <div className="flex items-center justify-between">
                         <button
                             onClick={() => handleQuantityChange(-1)}
-                            className="w-10 h-10 rounded-full border border-[#2a2e39] flex items-center justify-center text-[#d1d4dc] hover:bg-[#2a2e39] transition-colors"
+                            className="w-10 h-10 rounded-full border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border-primary)] transition-colors"
                         >
                             <Minus size={18} />
                         </button>
@@ -104,11 +155,11 @@ const MobileSellOrder = () => {
                             type="number"
                             value={quantity}
                             onChange={(e) => setQuantity(Number(e.target.value))}
-                            className="bg-transparent text-center text-2xl font-bold text-white w-full outline-none"
+                            className="bg-transparent text-center text-2xl font-bold text-[var(--text-primary)] w-full outline-none"
                         />
                         <button
                             onClick={() => handleQuantityChange(1)}
-                            className="w-10 h-10 rounded-full border border-[#2a2e39] flex items-center justify-center text-[#d1d4dc] hover:bg-[#2a2e39] transition-colors"
+                            className="w-10 h-10 rounded-full border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border-primary)] transition-colors"
                         >
                             <Plus size={18} />
                         </button>
@@ -116,12 +167,12 @@ const MobileSellOrder = () => {
                 </div>
 
                 {/* Price Input */}
-                <div className="mb-6 bg-[#1e2330] p-4 rounded-lg border border-[#2a2e39]">
-                    <label className="text-[10px] font-bold text-[#868993] uppercase mb-4 block">Enter Price</label>
+                <div className="mb-6 bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)]">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-4 block">Enter Price</label>
                     <div className="flex items-center justify-between mb-4">
                         <button
                             onClick={() => handlePriceChange(-0.05)}
-                            className="w-10 h-10 rounded-full border border-[#2a2e39] flex items-center justify-center text-[#d1d4dc] hover:bg-[#2a2e39] transition-colors"
+                            className="w-10 h-10 rounded-full border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border-primary)] transition-colors"
                         >
                             <Minus size={18} />
                         </button>
@@ -130,24 +181,24 @@ const MobileSellOrder = () => {
                             value={price}
                             onChange={(e) => setPrice(e.target.value)}
                             disabled={orderType === 'Market'} // Disable if Market order
-                            className={`bg-transparent text-center text-2xl font-bold text-white w-full outline-none ${orderType === 'Market' ? 'opacity-50' : ''}`}
+                            className={`bg-transparent text-center text-2xl font-bold text-[var(--text-primary)] w-full outline-none ${orderType === 'Market' ? 'opacity-50' : ''}`}
                         />
                         <button
                             onClick={() => handlePriceChange(0.05)}
-                            className="w-10 h-10 rounded-full border border-[#2a2e39] flex items-center justify-center text-[#d1d4dc] hover:bg-[#2a2e39] transition-colors"
+                            className="w-10 h-10 rounded-full border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border-primary)] transition-colors"
                         >
                             <Plus size={18} />
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-[#2a2e39] pt-4">
-                        <span className="text-xs font-bold text-[#d1d4dc]">Place order at</span>
-                        <div className="flex bg-[#0b0e14] rounded-full p-1 border border-[#2a2e39]">
+                    <div className="flex items-center justify-between border-t border-[var(--border-primary)] pt-4">
+                        <span className="text-xs font-bold text-[var(--text-secondary)]">Place order at</span>
+                        <div className="flex bg-[var(--bg-main)] rounded-full p-1 border border-[var(--border-primary)]">
                             <button
                                 onClick={() => { setOrderType('Market'); setPrice(stock.price); }} // Reset to Market/Current Price
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${orderType === 'Market'
-                                    ? 'bg-[#2a2e39] text-white shadow-sm'
-                                    : 'text-[#868993] hover:text-[#d1d4dc]'
+                                    ? 'bg-[var(--border-primary)] text-[var(--text-primary)] shadow-sm'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                                     }`}
                             >
                                 Market
@@ -156,7 +207,7 @@ const MobileSellOrder = () => {
                                 onClick={() => setOrderType('Limit')}
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${orderType === 'Limit'
                                     ? 'bg-[#f23645] text-white shadow-sm'
-                                    : 'text-[#868993] hover:text-[#d1d4dc]'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                                     }`}
                             >
                                 Limit
@@ -167,17 +218,20 @@ const MobileSellOrder = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-4 bg-[#14161f] border-t border-[#2a2e39]">
+            <div className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)]">
                 <div className="flex justify-between items-center mb-4 text-xs font-medium">
-                    <span className="text-[#868993]">Margin Required (Approx)</span>
-                    <span className="text-[#868993]">Available Margin</span>
+                    <span className="text-[var(--text-muted)]">Margin Required (Approx)</span>
+                    <span className="text-[var(--text-muted)]">Available Margin</span>
                 </div>
                 <div className="flex justify-between items-center mb-4 font-bold">
-                    <span className="text-white text-sm">₹{(price * quantity).toFixed(2)} <span className="text-[#f23645] text-xs">+ Charges</span></span>
-                    <span className="text-white text-sm">₹0.00</span>
+                    <span className="text-[var(--text-primary)] text-sm">₹{(price * quantity).toFixed(2)} <span className="text-[#f23645] text-xs">+ Charges</span></span>
+                    <span className="text-[var(--text-primary)] text-sm">₹0.00</span>
                 </div>
-                <button className="w-full bg-[#f23645] hover:bg-[#c92a37] text-white py-3.5 rounded text-sm font-bold uppercase tracking-wide transition-colors shadow-lg shadow-[#f23645]/20">
-                    Sell
+                <button
+                    onClick={handleSell}
+                    disabled={isLoading}
+                    className={`w-full bg-[#f23645] hover:bg-[#c92a37] text-white py-3.5 rounded text-sm font-bold uppercase tracking-wide transition-colors shadow-lg shadow-[#f23645]/20 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {isLoading ? 'Placing Order...' : 'Sell'}
                 </button>
             </div>
         </div>

@@ -3,6 +3,7 @@ import Order from "../../Pages/Trade/Orders/Orders";
 import Portfolio from "../../Pages/Trade/Portfolio/PortFolio";
 import Position from "../../Pages/Trade/Positions/Positions";
 import TradeOne from "../../Pages/Trade/TradeOne/TradeOne";
+import Profile from "../../Pages/Trade/Accounts/Profile/Profile";
 import { Routes, Route, Navigate } from "react-router-dom";
 function TradeRoute() {
   return (
@@ -13,6 +14,7 @@ function TradeRoute() {
       <Route path="orders" element={<Order />} />
       <Route path="portfolio" element={<Portfolio />} />
       <Route path="positions" element={<Position />} />
+      <Route path="profile" element={<Profile />} />
     </Routes>
   );
 }

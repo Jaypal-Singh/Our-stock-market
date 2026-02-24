@@ -8,7 +8,7 @@ import News from "./Components/News/News";
 import Events from "./Components/Events/Events";
 import SimilarStocks from "./Components/Similar Stocks/SimilarStocks";
 
-function OverviewSection() {
+function OverviewSection({ stock }) {
   const navItems = [
     { name: "Activity", id: "activity" },
     { name: "Analyst Ratings & Fundamental Ratios", id: "analyst" },
@@ -28,15 +28,15 @@ function OverviewSection() {
   };
 
   return (
-    <div className="bg-[#0b0e14] text-[#d1d4dc] h-full overflow-y-auto customscrollbar">
+    <div className="bg-[var(--bg-main)] text-[var(--text-secondary)] h-full overflow-y-auto customscrollbar">
       {/* Navigation Tabs */}
-      <div className="sticky top-0 bg-[#0b0e14] z-30 p-3 border-b border-[#2a2e39]">
+      <div className="sticky top-0 bg-[var(--bg-main)] z-30 p-3 border-b border-[var(--border-primary)]">
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => scrollToSection(item.id)}
-              className="whitespace-nowrap px-3 py-1.5 rounded bg-[#1c202b] border border-[#2a2e39] text-[11px] hover:text-white hover:bg-[#2a2e39] transition-all"
+              className="whitespace-nowrap px-3 py-1.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[11px] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all"
             >
               {item.name}
             </button>
@@ -47,10 +47,10 @@ function OverviewSection() {
       {/* Sections Container */}
       <div className="p-4 space-y-6">
         <section id="activity">
-          <Activity />
+          <Activity stock={stock} />
         </section>
         <section id="analyst">
-          <AnalystRatings />
+          <AnalystRatings stock={stock} />
         </section>
         <section id="performance">
           <PerformanceOverview />
