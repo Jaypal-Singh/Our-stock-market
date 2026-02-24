@@ -15,12 +15,15 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import TradingViewChart from "../../../../Components/Chart/TradingViewChart";
+import { useSocket } from "../../../../context/SocketContext";
+import { parseTickData } from "../../../../utils/stockDataParser";
 
 function ChartSection() {
   const navigate = useNavigate();
   const location = useLocation();
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes('/trade/chart');
+  const { socket, isConnected } = useSocket();
 
   const [interval, setInterval] = React.useState('ONE_MINUTE');
   const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
@@ -38,20 +41,93 @@ function ChartSection() {
 
   const [hoveredCandle, setHoveredCandle] = React.useState(null);
 
-  // Display data: Hovered candle OR current stock live data
-  const displayOpen = hoveredCandle ? hoveredCandle.open : (stock?.open || 0);
-  const displayHigh = hoveredCandle ? hoveredCandle.high : (stock?.high || 0);
-  const displayLow = hoveredCandle ? hoveredCandle.low : (stock?.low || 0);
-  const displayClose = hoveredCandle ? hoveredCandle.close : (stock?.close || stock?.ltp || 0);
+  // --- Live price data stored in a single ref (no re-render on every tick field update) ---
+  const liveDataRef = React.useRef({
+    ltp: stock?.ltp || stock?.price || 0,
+    change: stock?.change || 0,
+    changePercent: stock?.changePercent || 0,
+    isUp: stock?.isUp ?? true,
+    open: stock?.open || 0,
+    high: stock?.high || 0,
+    low: stock?.low || 0,
+    close: stock?.close || 0,
+  });
 
-  const isHoverUp = hoveredCandle ? (hoveredCandle.close >= hoveredCandle.open) : stock?.isUp;
-  const textColor = isHoverUp ? "text-[#089981]" : "text-[#f23645]";
+  // Single tick counter — only used to trigger a re-render when new tick arrives
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+  // Subscribe to live socket ticks for this stock
+  React.useEffect(() => {
+    if (!socket || !isConnected || !stock?.token) return;
+
+    const handleTick = (tickData) => {
+      try {
+        const parsed = parseTickData(tickData);
+        if (!parsed || parsed.token !== stock.token) return;
+
+        const ltp = parsed.ltp;
+        if (!ltp) return;
+
+        const prevClose = liveDataRef.current.close || stock?.close || stock?.ltp || ltp;
+        const chg = ltp - prevClose;
+        const chgPct = prevClose > 0 ? (chg / prevClose) * 100 : 0;
+
+        // Mutate ref directly — no re-render per field, just one below
+        liveDataRef.current = {
+          ltp,
+          change: parseFloat(chg.toFixed(2)),
+          changePercent: parseFloat(chgPct.toFixed(2)),
+          isUp: chg >= 0,
+          open: parsed.open || liveDataRef.current.open,
+          high: parsed.high ? Math.max(liveDataRef.current.high, parsed.high) : liveDataRef.current.high,
+          low: parsed.low
+            ? (liveDataRef.current.low === 0 ? parsed.low : Math.min(liveDataRef.current.low, parsed.low))
+            : liveDataRef.current.low,
+          close: liveDataRef.current.close,
+        };
+
+        forceUpdate(); // Single re-render per tick
+      } catch (e) {
+        console.error('ChartSection tick error:', e);
+      }
+    };
+
+    socket.on('tick_data', handleTick);
+    return () => socket.off('tick_data', handleTick);
+  }, [socket, isConnected, stock?.token]);
+
+  // Reset ref when stock changes (navigation to different stock)
+  React.useEffect(() => {
+    if (stock) {
+      liveDataRef.current = {
+        ltp: stock.ltp || stock.price || 0,
+        change: stock.change || 0,
+        changePercent: stock.changePercent || 0,
+        isUp: stock.isUp ?? true,
+        open: stock.open || 0,
+        high: stock.high || 0,
+        low: stock.low || 0,
+        close: stock.close || 0,
+      };
+      forceUpdate();
+    }
+  }, [stock?.token]);
+
+  // Read from ref for display
+  const live = liveDataRef.current;
+  const displayOpen = hoveredCandle ? hoveredCandle.open : live.open;
+  const displayHigh = hoveredCandle ? hoveredCandle.high : live.high;
+  const displayLow = hoveredCandle ? hoveredCandle.low : live.low;
+  const displayClose = hoveredCandle ? hoveredCandle.close : live.ltp;
+  const liveLtp = live.ltp;
+  const liveChange = live.change;
+  const liveChangePercent = live.changePercent;
+  const liveIsUp = hoveredCandle ? (hoveredCandle.close >= hoveredCandle.open) : live.isUp;
+  const textColor = liveIsUp ? "text-[#089981]" : "text-[#f23645]";
 
   const handleCrosshairMove = React.useCallback((data) => {
     setHoveredCandle(prev => {
-      // optimizaton: if data is null and prev is null, do nothing
       if (!data && !prev) return prev;
-      // optimization: if data and prev exist and times match, do nothing (avoid re-render)
       if (data && prev && data.time === prev.time) return prev;
       return data;
     });
@@ -189,8 +265,8 @@ function ChartSection() {
               C<span className={textColor}>{displayClose}</span>
             </span>
             {!hoveredCandle && (
-              <span className={`${stock.isUp ? "text-[#089981]" : "text-[#f23645]"} font-bold`}>
-                {stock.change > 0 ? "+" : ""}{stock.change} ({stock.changePercent}%)
+              <span className={`${liveIsUp ? "text-[#089981]" : "text-[#f23645]"} font-bold`}>
+                {liveChange > 0 ? "+" : ""}{liveChange} ({liveChangePercent}%)
               </span>
             )}
             {hoveredCandle && (
@@ -220,13 +296,13 @@ function ChartSection() {
         <div className="absolute top-4 left-4 flex items-center z-10 shadow-lg pointer-events-none">
           {/* Use pointer-events-auto on buttons to allow clicking over the chart */}
           <div className="bg-[#089981] text-white px-3 py-1.5 rounded-l text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
-            BUY @ {stock?.price || "0.00"}
+            BUY @ {liveLtp || "0.00"}
           </div>
           <div className="bg-[var(--bg-secondary)] text-[var(--text-primary)] border-x border-[var(--border-primary)] px-2 py-1.5 text-[11px]">
             1
           </div>
           <div className="bg-[#f23645] text-white px-3 py-1.5 rounded-r text-[11px] font-bold cursor-pointer hover:opacity-90 pointer-events-auto">
-            SELL @ {stock?.price || "0.00"}
+            SELL @ {liveLtp || "0.00"}
           </div>
         </div>
       </div>

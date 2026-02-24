@@ -456,16 +456,23 @@ function StockList() {
                                         />
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-[13px] flex items-center gap-2">
-                                        {stock.name}
-                                        {stock.instrumenttype === 'FUTSTK' && (
-                                            <span className="text-[8px] px-1.5 py-0.5 bg-[#f7931a]/20 text-[#f7931a] rounded">FUT</span>
+                                <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-[13px] flex items-center gap-2">
+                                            {stock.symbol || stock.name}
+                                            {stock.instrumenttype === 'FUTSTK' && (
+                                                <span className="text-[8px] px-1.5 py-0.5 bg-[#f7931a]/20 text-[#f7931a] rounded">FUT</span>
+                                            )}
+                                        </span>
+                                        <span className="text-[10px] text-[var(--text-muted)]">{exchangeType}</span>
+                                        {stock.lastUpdated && (
+                                            <Sparkles size={12} className="text-[#089981] animate-pulse" />
                                         )}
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-muted)]">{exchangeType}</span>
-                                    {stock.lastUpdated && (
-                                        <Sparkles size={12} className="text-[#089981] animate-pulse" />
+                                    </div>
+                                    {stock.name && stock.name !== stock.symbol && (
+                                        <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[160px]">
+                                            {stock.name}
+                                        </span>
                                     )}
                                 </div>
                                 <div className="text-right">
