@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router";
+import { useToast } from "../../../../context/ToastContext";
 
 const Login = () => {
+  const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
@@ -32,29 +34,28 @@ const Login = () => {
 
       if (response.ok) {
         localStorage.setItem("userInfo", JSON.stringify(data));
-        // Also simpler token storage if needed, but usually userInfo contains the token
-        // Let's verify what the backend returns. It returns: _id, name, email, token.
+        showToast("Logged in successfully", "success");
         navigate("/trade/watchlist");
       } else {
-        alert(data.message || "Invalid Email or Password");
+        showToast(data.message || "Invalid Email or Password", "error");
       }
     } catch (error) {
       console.error("Error logging in:", error);
-      alert("Error logging in. Please try again.");
+      showToast("Error logging in. Please try again.", "error");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center font-sans text-gray-200">
-      <div className="w-full max-w-md bg-[#131722] p-8 rounded-lg border border-gray-800 shadow-2xl">
-        <h2 className="text-2xl font-bold mb-6 text-white border-b border-gray-800 pb-4">
+    <div className="min-h-screen bg-[var(--bg-main)] flex items-center justify-center font-sans text-[var(--text-secondary)]">
+      <div className="w-full max-w-md bg-[var(--bg-card)] p-8 rounded-lg border border-[var(--border-primary)] shadow-2xl">
+        <h2 className="text-2xl font-bold mb-6 text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-4">
           Login
         </h2>
 
         <form className="space-y-5" onSubmit={handleLogin}>
           {/* Email Field */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
               Email Address
             </label>
             <input
@@ -63,7 +64,7 @@ const Login = () => {
               value={email}
               onChange={handleChange}
               placeholder="name@example.com"
-              className="w-full bg-[#1e222d] border border-gray-700 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
               required
             />
           </div>
@@ -71,7 +72,7 @@ const Login = () => {
           {/* Password Field */}
           <div>
             <div className="flex justify-between mb-2">
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                 Password
               </label>
               <a href="#" className="text-xs text-blue-400 hover:underline">
@@ -85,13 +86,13 @@ const Login = () => {
                 value={password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full bg-[#1e222d] border border-gray-700 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="h-5 w-5" />
@@ -107,7 +108,7 @@ const Login = () => {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           New user?{" "}
           <button onClick={() => navigate("/signup")} className="text-blue-400 hover:underline cursor-pointer">
             Create an account

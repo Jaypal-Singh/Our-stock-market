@@ -1,151 +1,141 @@
 
 import React, { useState } from 'react';
-import { Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Filter, RefreshCw, AlertCircle } from 'lucide-react';
 
-const MobilePortfolio = () => {
+const MobilePortfolio = ({ holdings = [], summary, loading, error }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Sample data based on screenshot structure + dark theme adaptation
-    const portfolioSummary = {
-        totalPL: -6998.20,
-        totalPLPercent: -30.24,
-        invested: 23139.00,
-        current: 16141.40,
-        dayGain: 0.00
-    };
+    const totalInvested = summary?.totalInvested ?? 0;
+    const totalPnl = summary?.totalPnl ?? summary?.totalRealizedPnl ?? 0;
+    const isPnlPositive = totalPnl >= 0;
+    const pnlPct = totalInvested > 0
+        ? ((totalPnl / totalInvested) * 100).toFixed(2)
+        : '0.00';
 
-    const holdings = [
-        {
-            symbol: "LXCHEM",
-            qty: 110,
-            avgPrice: 210.36,
-            ltp: 146.74,
-            pl: -6998.20,
-            plPercent: -30.24,
-            dayChangePercent: -3.38
-        },
-        // Add more dummy items to test scrolling
-        {
-            symbol: "TATASTEEL",
-            qty: 50,
-            avgPrice: 150.00,
-            ltp: 155.00,
-            pl: 250.00,
-            plPercent: 3.33,
-            dayChangePercent: 1.20
-        },
-        {
-            symbol: "RELIANCE",
-            qty: 10,
-            avgPrice: 2400.00,
-            ltp: 2380.00,
-            pl: -200.00,
-            plPercent: -0.83,
-            dayChangePercent: -0.50
-        },
-        {
-            symbol: "HDFCBANK",
-            qty: 25,
-            avgPrice: 1600.00,
-            ltp: 1620.00,
-            pl: 500.00,
-            plPercent: 1.25,
-            dayChangePercent: 0.80
-        }
-    ];
+    const fmt = (n) => Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const isProfit = (value) => value >= 0;
+    const filtered = (holdings || []).filter(h =>
+        h.tradingsymbol.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
-        <div className="flex flex-col h-full bg-[#0b0e14] text-[#d1d4dc] font-sans relative">
+        <div className="flex flex-col h-full bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans relative">
 
-            {/* 1. Header with Search & Filter */}
+            {/* 1. Search & Filter */}
             <div className="p-4 flex items-center gap-3">
                 <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
                     <input
                         type="text"
-                        placeholder="Search"
-                        className="w-full bg-[#1e222d] border border-[#2a2e39] rounded-full py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                        placeholder="Search holdings…"
+                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-full py-2 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)]"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className="bg-[#1e222d] p-2 rounded-full border border-[#2a2e39] text-[#d1d4dc]">
+                <button className="bg-[var(--bg-secondary)] p-2 rounded-full border border-[var(--border-primary)] text-[var(--text-secondary)]">
                     <Filter size={18} />
                 </button>
             </div>
 
-            {/* 2. Portfolio Summary Card */}
-            {/* Using a gradient or solid background to distinguish it, similar to the pink/red background in screenshot but dark theme appropriate */}
-            <div className={`mx-4 p-4 rounded-xl ${portfolioSummary.totalPL >= 0 ? 'bg-green-900/20 border-green-800/30' : 'bg-red-900/20 border-red-800/30'} border`}>
-                <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs text-gray-400">Total P&L</span>
+            {/* 2. Error Banner */}
+            {error && (
+                <div className="mx-4 mb-3 flex items-start gap-2 bg-[#1c1018] border border-[#f23645]/40 rounded p-3 text-[11px] text-[#f23645]">
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {/* 3. Portfolio Summary Card */}
+            <div className={`mx-4 p-5 rounded-2xl shadow-sm border transition-all duration-300 ${isPnlPositive
+                ? 'bg-[#00a278]/10 border-[#00a278]/20'
+                : 'bg-[#f23645]/10 border-[#f23645]/20'} `}>
+                <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Total P&L</span>
+                    {loading && <RefreshCw size={14} className="animate-spin text-[var(--text-muted)]" />}
                 </div>
 
-                <div className={`text-2xl font-bold mb-4 ${portfolioSummary.totalPL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {portfolioSummary.totalPL >= 0 ? '+' : ''}{portfolioSummary.totalPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    <span className="text-lg font-normal ml-1">
-                        ({portfolioSummary.totalPLPercent}%)
-                    </span>
+                <div className={`text-3xl font-extrabold mb-5 flex items-baseline gap-2 ${isPnlPositive ? 'text-green-500' : 'text-red-500'}`}>
+                    {summary ? (
+                        <>
+                            <span>{isPnlPositive ? '+' : ''}₹{fmt(totalPnl)}</span>
+                            <span className="text-sm font-medium opacity-80 decoration-0">({pnlPct}%)</span>
+                        </>
+                    ) : loading ? (
+                        <span className="text-base text-[var(--text-muted)]">Loading…</span>
+                    ) : '—'}
                 </div>
 
-                <div className="flex justify-between items-center text-sm border-t border-dashed border-gray-700/50 pt-3">
+                <div className="flex justify-between items-center text-sm border-t border-white/5 pt-4">
                     <div>
-                        <div className="text-xs text-gray-400 mb-0.5">Invested</div>
-                        <div className="font-semibold text-white">₹{portfolioSummary.invested.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">Invested</div>
+                        <div className="font-bold text-[var(--text-primary)]">
+                            {summary ? `₹${fmt(totalInvested)}` : '—'}
+                        </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-xs text-gray-400 mb-0.5">Current</div>
-                        <div className="font-semibold text-white">₹{portfolioSummary.current.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">Current Value</div>
+                        <div className="font-bold text-[var(--text-primary)]">
+                            {summary ? `₹${fmt(summary.currentValue ?? totalInvested)}` : '—'}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 3. Holdings List Header */}
-            <div className="px-4 py-2 flex justify-between items-center text-[10px] text-gray-500 uppercase mt-2 border-b border-[#2a2e39]">
-                <span>Symbol / Qty / Avg. Price</span>
-                <span>Total P&L / LTP</span>
+            {/* 4. Holdings List Header */}
+            <div className="px-4 py-2 flex justify-between items-center text-[10px] text-[var(--text-muted)] uppercase mt-2 border-b border-[var(--border-primary)]">
+                <span>Symbol / Qty / LTP</span>
+                <span>Invested / Total P&amp;L</span>
             </div>
 
-            {/* 4. Holdings List */}
-            <div className="flex-1 overflow-y-auto pb-16 customscrollbar">
-                {holdings.map((stock, index) => (
-                    <div key={index} className="px-4 py-3 border-b border-[#2a2e39] flex justify-between items-start">
-
-                        {/* Left Side */}
-                        <div>
-                            <div className="font-bold text-white text-sm mb-1">{stock.symbol}</div>
-                            <div className="text-xs text-gray-400">
-                                {stock.qty} <span className="text-[10px] mx-0.5">@</span> ₹{stock.avgPrice.toFixed(2)}
+            {/* 5. Holdings List */}
+            <div className="flex-1 overflow-y-auto pb-20 customscrollbar">
+                {loading && holdings.length === 0 ? (
+                    <div className="space-y-px">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="px-4 py-3 border-b border-[var(--border-primary)]">
+                                <div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse mb-2 w-1/3" />
+                                <div className="h-3 bg-[var(--bg-secondary)] rounded animate-pulse w-1/2" />
                             </div>
-                        </div>
-
-                        {/* Right Side */}
-                        <div className="text-right">
-                            <div className={`font-semibold text-sm mb-1 ${stock.pl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {stock.pl >= 0 ? '+' : ''}{stock.pl.toFixed(2)}
-                                <span className="text-[10px] ml-1">({stock.plPercent}%)</span>
-                            </div>
-                            <div className="text-xs text-gray-400 flex justify-end items-center gap-1">
-                                {stock.ltp.toFixed(2)}
-                                <span className={`${stock.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'} text-[10px]`}>
-                                    {stock.dayChangePercent}%
-                                </span>
-                            </div>
-                        </div>
+                        ))}
                     </div>
-                ))}
+                ) : filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)] gap-2">
+                        <AlertCircle size={28} className="opacity-40" />
+                        <p className="text-sm">{searchQuery ? 'No results found' : 'No holdings yet'}</p>
+                    </div>
+                ) : (
+                    filtered.map((h, i) => {
+                        const rowTotalPnl = h.totalPnl ?? h.realizedPnl ?? 0;
+                        const pnlPos = rowTotalPnl >= 0;
+                        const rowPnlPct = h.investedValue > 0
+                            ? ((rowTotalPnl / h.investedValue) * 100).toFixed(2)
+                            : '0.00';
+                        return (
+                            <div key={i} className="px-4 py-3 border-b border-[var(--border-primary)] flex justify-between items-start">
+                                {/* Left */}
+                                <div>
+                                    <div className="font-bold text-[var(--text-primary)] text-sm mb-1">{h.tradingsymbol}</div>
+                                    <div className="text-xs text-[var(--text-muted)]">
+                                        {h.netQty} <span className="mx-0.5">shs</span> <span className="mx-0.5">LTP</span> ₹{fmt(h.ltp || h.avgBuyPrice)}
+                                    </div>
+                                    <span className="text-[10px] bg-[var(--bg-secondary)] text-[var(--text-muted)] px-1 py-0.5 rounded mt-1 inline-block">
+                                        Avg ₹{fmt(h.avgBuyPrice)}
+                                    </span>
+                                </div>
+                                {/* Right */}
+                                <div className="text-right">
+                                    <div className="text-xs text-[var(--text-muted)] mb-0.5">₹{fmt(h.investedValue)}</div>
+                                    <div className={`font-semibold text-sm ${pnlPos ? 'text-green-500' : 'text-red-500'}`}>
+                                        {pnlPos ? '+' : ''}₹{fmt(rowTotalPnl)}
+                                        <span className="text-[10px] ml-1">({rowPnlPct}%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
             </div>
-
-            {/* 5. Fixed Footer (Today's Gain) */}
-            <div className="absolute bottom-0 left-0 right-0 bg-[#1e222d] border-t border-[#2a2e39] py-3 px-4 flex justify-between items-center z-10">
-                <span className="text-sm font-medium text-gray-300">Today's Gain</span>
-                <span className={`text-sm font-bold ${portfolioSummary.dayGain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ₹{portfolioSummary.dayGain.toFixed(2)}
-                </span>
-            </div>
-
         </div>
     );
 };

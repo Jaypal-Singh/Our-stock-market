@@ -111,9 +111,10 @@ function StockList() {
                 setActiveStocks([]);
                 return;
             }
+
             let mergedStocks = instruments;
 
-            // Fetch live quotes for these instruments
+            // 1. Fetch live quotes for these instruments (REST API for initial snapshot)
             try {
                 const { fetchStockQuotes } = await import('../../services/angelOneService');
                 const liveData = await fetchStockQuotes(instruments);
@@ -139,25 +140,49 @@ function StockList() {
                         return inst;
                     });
                 }
-                setActiveStocks(mergedStocks);
             } catch (quoteErr) {
                 console.error("Error fetching live quotes, showing static data", quoteErr);
-                setActiveStocks(instruments);
             }
-            // --- Auto Select First Stock Logic ---
-            if (mergedStocks.length > 0) {
-                // Check if we already have a stock in state to avoid loop
-                // if (!location.state?.stock) {
-                //     console.log("Navigating to set default stock", mergedStocks[0].symbol);
-                //     navigate('/trade/watchlist', { state: { stock: mergedStocks[0] }, replace: true });
-                // }
-            }
+
+            // 2. Set initial state with (hopefully) populated data
+            setActiveStocks(mergedStocks);
+
+            // 3. Register these stocks with the socket hook to ensure subscription & future updates
+            mergedStocks.forEach(inst => {
+                // Determine if we should pass the merged data or just the instrument
+                // addStock typically expects an object with { token, ... }
+                // Giving it the merged stock is fine.
+                addStock(inst);
+            });
+
         } catch (error) {
             console.error("Error fetching stocks", error);
+            // If API fails, we might still have some data in 'stocks' from socket if previously loaded? 
+            // specific error handling
         } finally {
             setIsLoading(false);
         }
     };
+
+    // Sync activeStocks with real-time 'stocks' from hook
+    useEffect(() => {
+        if (!activeStocks || activeStocks.length === 0) return;
+
+        setActiveStocks(prevActiveStocks => {
+            let hasUpdates = false;
+            const nextStocks = prevActiveStocks.map(ast => {
+                const live = stocks.find(s => s.token === ast.token);
+                if (live && (live.ltp !== ast.ltp || live.change !== ast.change || live.lastUpdated !== ast.lastUpdated)) {
+                    hasUpdates = true;
+                    return { ...ast, ...live };
+                }
+                return ast;
+            });
+
+            return hasUpdates ? nextStocks : prevActiveStocks;
+        });
+    }, [stocks]);
+
 
     // Add stock to active watchlist via backend API
     const handleAddStockToWatchlist = async (stock) => {
@@ -274,7 +299,7 @@ function StockList() {
 
 
     return (
-        <div className="bg-[#0b0e14] w-full h-full flex flex-col text-[#d1d4dc] font-sans relative">
+        <div className="bg-[var(--bg-main)] w-full h-full flex flex-col text-[var(--text-secondary)] font-sans relative">
             <CreateWatchlistModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
@@ -287,8 +312,8 @@ function StockList() {
                     stockName={selectedStock.name}
                     stockSymbol={selectedStock.symbol}
                     stockPrice={parsePrice(selectedStock.price)}
-                    stockChange={parseFloat(selectedStock.change)}
-                    stockChangePercent={parsePercent(selectedStock.percent)}
+                    stockChange={parseFloat(selectedStock.change || 0)}
+                    stockChangePercent={parsePercent(selectedStock.changePercent || selectedStock.percent || 0)}
                     onClose={() => setShowBuyWindow(false)}
                     onSwitchToSell={() => handleSellClick(selectedStock)}
                 />
@@ -299,11 +324,10 @@ function StockList() {
                     stockName={selectedStock.name}
                     stockSymbol={selectedStock.symbol}
                     stockPrice={parsePrice(selectedStock.price)}
-                    stockChange={parseFloat(selectedStock.change)}
-                    stockChangePercent={parsePercent(selectedStock.percent)}
+                    stockChange={parseFloat(selectedStock.change || 0)}
+                    stockChangePercent={parsePercent(selectedStock.changePercent || selectedStock.percent || 0)}
                     onClose={() => setShowSellWindow(false)}
-                    onSwitchToBuy={() => handleSellClick(selectedStock)}
-
+                    onSwitchToBuy={() => handleBuyClick(selectedStock)}
                 />
             )}
 
@@ -319,7 +343,7 @@ function StockList() {
 
             {/* 1. Header (Fixed) */}
             <div className="flex-none">
-                <div className="flex items-center justify-between p-3 border-b border-[#2a2e39]">
+                <div className="flex items-center justify-between p-3 border-b border-[var(--border-primary)]">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold">Watchlist</span>
                         {/* Connection Status Indicator */}
@@ -330,17 +354,17 @@ function StockList() {
                             {isConnected ? '● LIVE' : '○ Connecting...'}
                         </span>
                     </div>
-                    <div className="flex gap-3 text-[#868993]">
+                    <div className="flex gap-3 text-[var(--text-muted)]">
                         {error && (
                             <span className="text-[10px] text-red-400">{error}</span>
                         )}
-                        <Filter size={18} className="cursor-pointer hover:text-white" />
-                        <Settings size={18} className="cursor-pointer hover:text-white" />
+                        <Filter size={18} className="cursor-pointer hover:text-[var(--text-primary)]" />
+                        <Settings size={18} className="cursor-pointer hover:text-[var(--text-primary)]" />
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center justify-between px-3 py-2 text-[13px] border-b border-[#2a2e39]">
+                <div className="flex items-center justify-between px-3 py-2 text-[13px] border-b border-[var(--border-primary)]">
                     <div className="flex overflow-x-auto customscrollbar-thin gap-4 flex-1">
                         {watchlists?.map((list) => (
                             <span
@@ -348,18 +372,18 @@ function StockList() {
                                 onClick={() => setActiveWatchlist(list)}
                                 onContextMenu={(e) => handleTabRightClick(e, list)}
                                 className={`pb-2 cursor-pointer whitespace-nowrap border-b-2 transition-colors ${(activeWatchlist?._id === list?._id || activeWatchlist === list)
-                                    ? "text-[#2962ff] border-[#2962ff]"
-                                    : "text-[#868993] border-transparent hover:text-white"
+                                    ? "text-[var(--accent-primary)] border-[var(--accent-primary)]"
+                                    : "text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]"
                                     }`}
                             >
                                 {list?.name || list}
                             </span>
                         ))}
                     </div>
-                    <div className="pl-3 border-l border-[#2a2e39] shrink-0">
+                    <div className="pl-3 border-l border-[var(--border-primary)] shrink-0">
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="text-[#868993] hover:text-[#2962ff] p-1"
+                            className="text-[var(--text-muted)] hover:text-[var(--accent-primary)] p-1"
                         >
                             <Plus size={18} />
                         </button>
@@ -385,14 +409,14 @@ function StockList() {
                 {isLoading ? (
                     <div className="px-0">
                         {Array.from({ length: 15 }).map((_, i) => (
-                            <div key={i} className="flex justify-between items-center px-4 py-2.5 border-b border-[#1e222d]">
+                            <div key={i} className="flex justify-between items-center px-4 py-2.5 border-b border-[var(--border-primary)]/30">
                                 <div className="flex items-center gap-2">
-                                    <div className="h-3 w-24 bg-[#1e222d] rounded animate-pulse"></div>
-                                    <div className="h-2.5 w-10 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-3 w-24 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-10 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1.5">
-                                    <div className="h-3 w-16 bg-[#1e222d] rounded animate-pulse"></div>
-                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-3 w-16 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
                                 </div>
                             </div>
                         ))}
@@ -411,7 +435,7 @@ function StockList() {
                         return (
                             <div
                                 key={stock.token || index}
-                                className="relative flex justify-between items-center px-4 py-2.5 hover:bg-[#2a2e39] cursor-pointer border-b border-[#1e222d]"
+                                className="relative flex justify-between items-center px-4 py-2.5 hover:bg-[var(--bg-secondary)] cursor-pointer border-b border-[var(--border-primary)]/50"
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                                 onClick={() => {
@@ -439,7 +463,7 @@ function StockList() {
                                             <span className="text-[8px] px-1.5 py-0.5 bg-[#f7931a]/20 text-[#f7931a] rounded">FUT</span>
                                         )}
                                     </span>
-                                    <span className="text-[10px] text-[#868993]">{exchangeType}</span>
+                                    <span className="text-[10px] text-[var(--text-muted)]">{exchangeType}</span>
                                     {stock.lastUpdated && (
                                         <Sparkles size={12} className="text-[#089981] animate-pulse" />
                                     )}
@@ -452,16 +476,16 @@ function StockList() {
                                             >
                                                 {typeof price === 'number' ? price.toFixed(2) : '0.00'} {isUp ? "▲" : "▼"}
                                             </div>
-                                            <div className="text-[11px] text-[#868993]">
+                                            <div className="text-[11px] text-[var(--text-muted)]">
                                                 {typeof change === 'number' ? change.toFixed(2) : '0.00'} ({typeof changePercent === 'number' ? changePercent.toFixed(2) : '0.00'}%)
                                             </div>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="text-[13px] font-bold text-[#868993]">
+                                            <div className="text-[13px] font-bold text-[var(--text-muted)]">
                                                 --
                                             </div>
-                                            <div className="text-[11px] text-[#868993]">
+                                            <div className="text-[11px] text-[var(--text-muted)]">
                                                 No data
                                             </div>
                                         </>

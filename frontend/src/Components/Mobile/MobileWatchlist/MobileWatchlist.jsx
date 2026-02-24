@@ -31,7 +31,7 @@ const MobileWatchlist = ({ stocks = [], isConnected = false, error = null, onAdd
     }, [navigate]);
 
     return (
-        <div className="md:hidden bg-[#0b0e14] pb-20 font-sans">
+        <div className="md:hidden bg-[var(--bg-main)] pb-20 font-sans">
             {/* Connection Status */}
             {isConnected && !error && (
                 <div className="px-4 py-2 bg-[#089981]/10 border-b border-[#089981]/20 flex items-center gap-2">
@@ -45,8 +45,8 @@ const MobileWatchlist = ({ stocks = [], isConnected = false, error = null, onAdd
                 </div>
             )}
             {!isConnected && !error && (
-                <div className="px-4 py-2 bg-[#868993]/10 border-b border-[#868993]/20">
-                    <span className="text-xs text-[#868993]">🔄 Connecting to market data...</span>
+                <div className="px-4 py-2 bg-[var(--text-muted)]/10 border-b border-[var(--text-muted)]/20">
+                    <span className="text-xs text-[var(--text-muted)]">🔄 Connecting to market data...</span>
                 </div>
             )}
 
@@ -75,16 +75,16 @@ const MobileWatchlist = ({ stocks = [], isConnected = false, error = null, onAdd
                             onTouchStart={handleTouchStart}
                             onTouchEnd={handleTouchEnd}
                             onTouchMove={handleTouchEnd}
-                            className={`flex justify-between items-center px-4 py-3 border-b border-[#2a2e39] last:border-0 hover:bg-[#1e222d] transition-colors cursor-pointer select-none ${!hasLiveData ? 'opacity-50' : ''}`}
+                            className={`flex justify-between items-center px-4 py-3 border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer select-none ${!hasLiveData ? 'opacity-50' : ''}`}
                         >
                             <div className="flex flex-col">
-                                <span className="font-semibold text-[#d1d4dc] text-sm flex items-center gap-2">
+                                <span className="font-semibold text-[var(--text-secondary)] text-sm flex items-center gap-2">
                                     {stock.name || 'Unknown'}
                                     {stock.instrumenttype === 'FUTSTK' && (
                                         <span className="text-[8px] px-1.5 py-0.5 bg-[#f7931a]/20 text-[#f7931a] rounded">FUT</span>
                                     )}
                                 </span>
-                                <span className="text-[10px] text-[#868993] mt-0.5">
+                                <span className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                     {stock.symbol || stock.name} • {exchangeType}
                                 </span>
                             </div>
@@ -94,16 +94,16 @@ const MobileWatchlist = ({ stocks = [], isConnected = false, error = null, onAdd
                                         <div className={`font-semibold text-sm ${isUp ? 'text-[#089981]' : 'text-[#f23645]'} flex items-center gap-1 justify-end`}>
                                             <span>{price.toFixed(2)} {isUp ? "▲" : "▼"}</span>
                                         </div>
-                                        <div className="text-[10px] text-[#868993] mt-0.5">
+                                        <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                             {change.toFixed(2)} ({changePercent.toFixed(2)}%)
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="font-semibold text-sm text-[#868993]">
+                                        <div className="font-semibold text-sm text-[var(--text-muted)]">
                                             --
                                         </div>
-                                        <div className="text-[10px] text-[#868993] mt-0.5">
+                                        <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                             No data
                                         </div>
                                     </>

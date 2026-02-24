@@ -18,22 +18,22 @@ const MobileSearchInput = ({
     }, [isFocused]);
 
     return (
-        <div className={`flex items-center bg-[#1e222d] rounded-md px-3 py-2 border transition-colors ${isFocused ? 'border-[#2962ff]' : 'border-[#2a2e39]'}`}>
+        <div className={`flex items-center bg-[var(--bg-secondary)] rounded-md px-3 py-2 border transition-colors ${isFocused ? 'border-[var(--accent-primary)]' : 'border-[var(--border-primary)]'}`}>
             {isFocused ? (
                 <ArrowLeft
                     size={20}
-                    className="text-[#d1d4dc] mr-3 cursor-pointer"
+                    className="text-[var(--text-secondary)] mr-3 cursor-pointer"
                     onClick={onClose}
                 />
             ) : (
-                <Search size={18} className="text-[#868993] mr-3" />
+                <Search size={18} className="text-[var(--text-muted)] mr-3" />
             )}
 
             <input
                 ref={inputRef}
                 type="text"
                 placeholder="Search & add"
-                className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-[#50535e] font-medium"
+                className="bg-transparent border-none outline-none text-sm w-full text-[var(--text-primary)] placeholder-[var(--text-muted)]/50 font-medium"
                 value={query}
                 onChange={(e) => onChange(e.target.value)}
                 onFocus={onFocus}
@@ -42,7 +42,7 @@ const MobileSearchInput = ({
             {query && (
                 <button
                     onClick={onClear}
-                    className="text-[#868993] hover:text-white transition-colors p-1"
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1"
                 >
                     <X size={18} />
                 </button>

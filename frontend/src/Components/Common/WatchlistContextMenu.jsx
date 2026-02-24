@@ -32,19 +32,19 @@ const WatchlistContextMenu = ({ x, y, onRename, onDelete, onClose }) => {
 
     return (
         <div ref={menuRef} style={style}
-            className="bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl py-1 min-w-[160px] animate-in fade-in duration-100"
+            className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 min-w-[160px] animate-in fade-in duration-100"
         >
             <button
                 onClick={() => { onRename(); onClose(); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
             >
-                <Pencil size={14} className="text-[#868993]" />
+                <Pencil size={14} className="text-[var(--text-muted)]" />
                 Rename
             </button>
-            <div className="border-t border-[#2a2e39] mx-2" />
+            <div className="border-t border-[var(--border-primary)] mx-2" />
             <button
                 onClick={() => { onDelete(); onClose(); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#f23645] hover:bg-[#2a2e39] transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#f23645] hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
             >
                 <Trash2 size={14} />
                 Delete

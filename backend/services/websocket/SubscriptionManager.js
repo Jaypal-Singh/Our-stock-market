@@ -32,7 +32,7 @@ class SubscriptionManager {
 
         // Normalize and validate stocks
         const normalizedStocks = normalizeStockTokens(stocks);
-        
+
         if (normalizedStocks.length === 0) {
             logger.warn('No valid stocks to subscribe');
             return { success: false, message: 'No valid stocks provided' };
@@ -48,7 +48,7 @@ class SubscriptionManager {
         // Force re-subscription even if in cache (WebSocket might have reconnected)
         for (const [exchSeg, stockList] of Object.entries(exchangeGroups)) {
             const result = this.subscribeToExchange(exchSeg, stockList, mode, true); // true = force
-            
+
             if (result.success) {
                 totalSubscribed += result.count;
                 results[exchSeg] = result.count;
@@ -71,7 +71,7 @@ class SubscriptionManager {
      */
     subscribeToExchange(exchSeg, stocks, mode, force = false) {
         const exchangeConfig = getExchangeConfig(exchSeg);
-        
+
         if (!exchangeConfig) {
             logger.error(`Unsupported exchange: ${exchSeg}`);
             return { success: false, count: 0 };
@@ -137,7 +137,7 @@ class SubscriptionManager {
 
         tokens.forEach(token => {
             const tokenStr = typeof token === 'object' ? token.token : String(token);
-            
+
             // Find in subscriptions
             for (const [key, sub] of this.subscriptions.entries()) {
                 if (sub.token === tokenStr) {
@@ -153,7 +153,7 @@ class SubscriptionManager {
         // Send unsubscribe requests for each exchange
         for (const [exchSeg, tokenList] of Object.entries(exchangeGroups)) {
             const exchangeConfig = getExchangeConfig(exchSeg);
-            
+
             if (exchangeConfig) {
                 const request = {
                     correlationID: `unsubscribe_${exchSeg.toLowerCase()}`,
@@ -179,11 +179,11 @@ class SubscriptionManager {
 
         stocks.forEach(stock => {
             const exchSeg = stock.exch_seg || 'NSE';
-            
+
             if (!groups[exchSeg]) {
                 groups[exchSeg] = [];
             }
-            
+
             groups[exchSeg].push(stock);
         });
 

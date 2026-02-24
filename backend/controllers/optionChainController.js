@@ -1,0 +1,291 @@
+import { getSessionCredentials } from './angelController.js';
+import { createLogger } from '../utils/logger.js';
+import OptionChainCache from '../models/OptionChainCache.js';
+
+const logger = createLogger('OptionChain');
+
+// ── In-memory cache to avoid hitting API rate limits ──────────────────────────
+const greeksCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+function getCacheKey(name, expirydate) {
+    return `${name}:${expirydate}`;
+}
+
+function getCached(name, expirydate) {
+    const key = getCacheKey(name, expirydate);
+    const entry = greeksCache.get(key);
+    if (entry && Date.now() - entry.timestamp < CACHE_TTL_MS) {
+        logger.info(`Memory cache HIT for ${key}`);
+        return entry.data;
+    }
+    if (entry) greeksCache.delete(key); // expired
+    return null;
+}
+
+function setCache(name, expirydate, data) {
+    const key = getCacheKey(name, expirydate);
+    greeksCache.set(key, { data, timestamp: Date.now() });
+    if (greeksCache.size > 50) {
+        const oldest = greeksCache.keys().next().value;
+        greeksCache.delete(oldest);
+    }
+}
+
+// ── Save to MongoDB for persistent caching ────────────────────────────────────
+async function saveToDb(name, expirydate, optionChain) {
+    try {
+        await OptionChainCache.findOneAndUpdate(
+            { name, expirydate },
+            { data: optionChain, count: optionChain.length, updatedAt: new Date() },
+            { upsert: true, new: true }
+        );
+        logger.info(`DB cache saved for ${name}:${expirydate}`);
+    } catch (err) {
+        logger.warn(`DB cache save failed: ${err.message}`);
+    }
+}
+
+// ── Get from MongoDB when API has no data ─────────────────────────────────────
+async function getFromDb(name, expirydate) {
+    try {
+        const cached = await OptionChainCache.findOne({ name, expirydate });
+        if (cached && cached.data && cached.data.length > 0) {
+            logger.info(`DB cache HIT for ${name}:${expirydate} (${cached.data.length} strikes, updated ${cached.updatedAt})`);
+            return cached;
+        }
+    } catch (err) {
+        logger.warn(`DB cache read failed: ${err.message}`);
+    }
+    return null;
+}
+
+// ── Retry helper with exponential backoff ─────────────────────────────────────
+async function fetchWithRetry(url, options, maxRetries = 3) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch(url, options);
+            const rawText = await response.text();
+
+            if (response.status === 403 && attempt < maxRetries) {
+                const delayMs = Math.pow(2, attempt) * 1000;
+                logger.warn(`Rate limited (403). Retry ${attempt}/${maxRetries} after ${delayMs}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                continue;
+            }
+
+            return { response, rawText };
+        } catch (err) {
+            lastError = err;
+            if (attempt < maxRetries) {
+                const delayMs = Math.pow(2, attempt) * 1000;
+                logger.warn(`Fetch error: ${err.message}. Retry ${attempt}/${maxRetries} after ${delayMs}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+    }
+    throw lastError || new Error('All retry attempts failed');
+}
+
+/**
+ * Get Option Greeks data from Angel One API
+ * POST /api/option-chain/greeks
+ * Body: { name: "NIFTY", expirydate: "25JAN2024" }
+ */
+export const getOptionGreeks = async (req, res) => {
+    try {
+        const { name, expirydate } = req.body || {};
+
+        if (!name || !expirydate) {
+            return res.status(400).json({
+                success: false,
+                message: 'name and expirydate are required'
+            });
+        }
+
+        // ── Check in-memory cache first ───────────────────────────────────
+        const memoryCached = getCached(name, expirydate);
+        if (memoryCached) {
+            return res.status(200).json({
+                success: true,
+                ...memoryCached,
+                fromCache: true
+            });
+        }
+
+        // ── Get credentials (auto-login if expired) ──────────────────────
+        let credentials;
+        try {
+            credentials = await getSessionCredentials();
+        } catch (loginErr) {
+            console.error('❌ Login failed:', loginErr.message);
+            // If login fails, try DB cache
+            const dbCached = await getFromDb(name, expirydate);
+            if (dbCached) {
+                return res.status(200).json({
+                    success: true,
+                    data: dbCached.data,
+                    name,
+                    expiry: expirydate,
+                    count: dbCached.count,
+                    fromCache: true,
+                    cachedAt: dbCached.updatedAt
+                });
+            }
+            return res.status(401).json({
+                success: false,
+                message: 'Login failed: ' + loginErr.message
+            });
+        }
+
+        if (!credentials || !credentials.jwtToken) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated. Please login first.'
+            });
+        }
+
+        logger.info(`Option Greeks Request: ${name} / ${expirydate}`);
+
+        // Updated URL to correct Angel One endpoint
+        const apiUrl = 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/marketData/v1/optionGreek';
+
+        const headers = {
+            'Authorization': `Bearer ${credentials.jwtToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-ClientLocalIP': '127.0.0.1',
+            'X-ClientPublicIP': '127.0.0.1',
+            'X-MACAddress': 'MAC_ADDRESS',
+            'X-PrivateKey': credentials.apiKey
+        };
+
+        const requestBody = JSON.stringify({ name, expirydate });
+
+        let result = null;
+        let lastError = null;
+
+        try {
+            const { response, rawText } = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers,
+                body: requestBody
+            });
+
+            // Enhanced logging for debugging
+            console.log(`🔍 [OptionGreeks] Raw Response:`, rawText.substring(0, 1000));
+            logger.info(`HTTP ${response.status} | Response length: ${rawText.length}`);
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    lastError = 'API rate limit exceeded (403). Please wait and try again.';
+                } else {
+                    lastError = `HTTP ${response.status}: ${rawText.substring(0, 200)}`;
+                }
+            } else {
+                result = JSON.parse(rawText);
+                if (result.status && result.data && result.data.length > 0) {
+                    logger.success(`SUCCESS — ${result.data.length} records`);
+                } else {
+                    lastError = result.message || 'No Data Available from API';
+                    if (result.errorcode) {
+                        logger.warn(`API Error Code: ${result.errorcode} | Message: ${result.message}`);
+                    }
+                }
+            }
+        } catch (fetchErr) {
+            console.error(`❌ Fetch error:`, fetchErr.message);
+            lastError = fetchErr.message?.includes('403')
+                ? 'API rate limit exceeded. Please wait a minute and try again.'
+                : fetchErr.message;
+        }
+
+        // ── Process successful API response ───────────────────────────────
+        if (result && result.status && result.data && result.data.length > 0) {
+            const strikeMap = {};
+
+            result.data.forEach(item => {
+                const strike = parseFloat(item.strikePrice);
+                if (!strikeMap[strike]) {
+                    strikeMap[strike] = { strikePrice: strike, CE: null, PE: null };
+                }
+
+                const greekData = {
+                    delta: parseFloat(item.delta) || 0,
+                    gamma: parseFloat(item.gamma) || 0,
+                    theta: parseFloat(item.theta) || 0,
+                    vega: parseFloat(item.vega) || 0,
+                    impliedVolatility: parseFloat(item.impliedVolatility) || 0,
+                    tradeVolume: parseFloat(item.tradeVolume) || 0
+                };
+
+                if (item.optionType === 'CE') {
+                    strikeMap[strike].CE = greekData;
+                } else if (item.optionType === 'PE') {
+                    strikeMap[strike].PE = greekData;
+                }
+            });
+
+            const optionChain = Object.values(strikeMap).sort(
+                (a, b) => a.strikePrice - b.strikePrice
+            );
+
+            logger.success(`Option Greeks: ${optionChain.length} strikes for ${name}`);
+
+            const responseData = {
+                data: optionChain,
+                name,
+                expiry: expirydate,
+                count: optionChain.length
+            };
+
+            // Save to both in-memory and DB cache
+            setCache(name, expirydate, responseData);
+            saveToDb(name, expirydate, optionChain); // fire-and-forget
+
+            return res.status(200).json({
+                success: true,
+                ...responseData
+            });
+        }
+
+        // ── API returned no data — try DB cache (last closing data) ───────
+        const dbCached = await getFromDb(name, expirydate);
+        if (dbCached) {
+            logger.info(`Serving DB cached data for ${name}:${expirydate}`);
+            return res.status(200).json({
+                success: true,
+                data: dbCached.data,
+                name,
+                expiry: expirydate,
+                count: dbCached.count,
+                fromCache: true,
+                cachedAt: dbCached.updatedAt
+            });
+        }
+
+        // ── No API data and no cached data ────────────────────────────────
+        return res.status(200).json({
+            success: false,
+            message: lastError || 'No Data Available',
+            debug: {
+                sentName: name,
+                sentExpiry: expirydate,
+                apiStatus: result?.status,
+                apiMessage: result?.message,
+                apiErrorCode: result?.errorcode
+            }
+        });
+
+    } catch (error) {
+        console.error('💀 Option Greeks Controller Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error: ' + error.message
+        });
+    }
+};
+

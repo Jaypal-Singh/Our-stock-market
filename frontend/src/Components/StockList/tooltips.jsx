@@ -4,7 +4,7 @@ function Tooltips({ position, onBuy, onSell, onDelete }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
-            <div className="flex items-center gap-1 bg-[#1e1e2d] px-2 py-1.5 rounded-md border border-gray-700 shadow-xl">
+            <div className="flex items-center gap-1 bg-[var(--bg-card)] px-2 py-1.5 rounded-md border border-[var(--border-primary)] shadow-xl">
 
                 {/* Buy Button (B) */}
                 <button
@@ -23,7 +23,7 @@ function Tooltips({ position, onBuy, onSell, onDelete }) {
                 </button>
 
                 {/* Icons */}
-                <div className="flex items-center gap-3 text-gray-400">
+                <div className="flex items-center gap-3 text-[var(--text-muted)]">
                     <button className="hover:text-white transition-colors cursor-pointer" title="Chart">
                         <BarChart2 size={16} />
                     </button>
@@ -41,7 +41,7 @@ function Tooltips({ position, onBuy, onSell, onDelete }) {
                         <Trash2 size={16} />
                     </button>
 
-                    <div className="h-4 w-px bg-gray-700 mx-0.5"></div>
+                    <div className="h-4 w-px bg-[var(--border-primary)] mx-0.5"></div>
 
                     <button className="hover:text-white transition-colors cursor-pointer" title="More">
                         <MoreVertical size={16} />
@@ -51,10 +51,10 @@ function Tooltips({ position, onBuy, onSell, onDelete }) {
                 {/* Arrow Pointer */}
                 {position === "bottom" ? (
                     // Arrow at TOP (for bottom tooltip)
-                    <div className="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 bg-[#1e1e2d] border-t border-l border-gray-700 rotate-45 transform"></div>
+                    <div className="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 bg-[var(--bg-card)] border-t border-l border-[var(--border-primary)] rotate-45 transform"></div>
                 ) : (
                     // Arrow at BOTTOM (for top tooltip - default)
-                    <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-[#1e1e2d] border-b border-r border-gray-700 rotate-45 transform"></div>
+                    <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-[var(--bg-card)] border-b border-r border-[var(--border-primary)] rotate-45 transform"></div>
                 )}
             </div>
         </div>

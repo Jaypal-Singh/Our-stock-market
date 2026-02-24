@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import OpenOrders from './components/OpenOrders';
 import OrderHistory from './components/OrderHistory';
+import useAngelOneSocket from '../../../Hooks/useAngelOneSocket';
 
 function Orders() {
     const location = useLocation();
@@ -61,23 +62,46 @@ function Orders() {
         setRefreshKey(prev => prev + 1);
     };
 
-    // Filter orders
-    // Open Orders: 'pending', 'open'
-    const openOrders = orders.filter(
-        order => order.orderstatus === 'pending' || order.orderstatus === 'open'
-    ).map(order => ({
-        time: new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        type: order.transactiontype,
-        instrument: order.tradingsymbol,
-        exchange: order.exchange || "NSE",
-        product: order.producttype === "INTRADAY" ? "Intraday" : "Delivery",
-        qty: `${order.filledShares || 0}/${order.quantity}`,
-        price: (order.price || 0).toFixed(2),
-        ltp: (order.price || 0).toFixed(2), // Mock LTP
-        status: order.orderstatus,
-        statusColor: "text-blue-400",
-        originalOrder: order // Make sure original order is passed for ID access
-    }));
+    // --- LIVE DATA INTEGRATION ---
+    const dynamicStocks = useMemo(() => {
+        const open = orders.filter(o => o.orderstatus === 'pending' || o.orderstatus === 'open');
+        return open.map(o => ({
+            token: o.symboltoken,
+            exchange: o.exchange || 'NSE'
+        }));
+    }, [orders]);
+
+    const { stocks: liveStocks } = useAngelOneSocket(dynamicStocks);
+
+    const openOrders = useMemo(() => {
+        return orders
+            .filter(order => order.orderstatus === 'pending' || order.orderstatus === 'open')
+            .map(order => {
+                const stocksList = Array.isArray(liveStocks) ? liveStocks : [];
+                const live = stocksList.find(l => (l.token === order.symboltoken || l.symboltoken === order.symboltoken));
+
+                // For MARKET orders, the "price" passed originally is 0, so we use marketPriceAtOrder as the reference price
+                const displayPrice = order.ordertype === 'MARKET'
+                    ? (order.marketPriceAtOrder || 0)
+                    : (order.price || 0);
+
+                const rawLtp = live?.ltp || order.marketPriceAtOrder || order.price || 0;
+
+                return {
+                    time: new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    type: order.transactiontype,
+                    instrument: order.tradingsymbol,
+                    exchange: order.exchange || "NSE",
+                    product: order.producttype === "INTRADAY" ? "Intraday" : "Delivery",
+                    qty: `${order.filledShares || 0}/${order.quantity}`,
+                    price: Number(displayPrice || 0).toFixed(2),
+                    ltp: Number(rawLtp || 0).toFixed(2),
+                    status: order.orderstatus,
+                    statusColor: order.orderstatus === 'open' ? "text-blue-400" : "text-yellow-400",
+                    originalOrder: order
+                };
+            });
+    }, [orders, liveStocks]);
 
     // History Orders: 'complete', 'rejected', 'cancelled'
     const historyOrders = orders.filter(
@@ -85,17 +109,17 @@ function Orders() {
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#0b0e14] text-[#d1d4dc] font-sans">
+        <div className="h-full flex flex-col bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans">
             {/* Header / Tabs */}
-            <div className="flex-none border-b border-[#2a2e39] px-6">
+            <div className="flex-none border-b border-[var(--border-primary)] px-6">
                 <div className="flex gap-6">
                     {['Open Orders', 'Order History'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab
-                                ? 'border-[#5c6bc0] text-[#5c6bc0]'
-                                : 'border-transparent text-[#868993] hover:text-[#d1d4dc]'
+                                ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]'
+                                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                                 }`}
                         >
                             {tab}
@@ -107,7 +131,7 @@ function Orders() {
             {/* Content Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-4 customscrollbar">
                 {loading ? (
-                    <div className="text-center text-[#868993] py-8">Loading...</div>
+                    <div className="text-center text-[var(--text-muted)] py-8">Loading...</div>
                 ) : error ? (
                     <div className="text-center text-red-500 py-8">{error}</div>
                 ) : (

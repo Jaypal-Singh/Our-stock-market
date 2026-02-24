@@ -45,6 +45,10 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    marketPriceAtOrder: {
+        type: Number,
+        default: 0
+    },
     quantity: {
         type: Number,
         required: true

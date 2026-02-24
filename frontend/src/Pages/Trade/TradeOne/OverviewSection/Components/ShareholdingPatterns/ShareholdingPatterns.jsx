@@ -11,7 +11,7 @@ const ShareholdingPatterns = () => {
   return (
     <div
       id="shareholding"
-      className="bg-[#131722] p-6 rounded-lg mb-6 border border-[#2a2e39]"
+      className="bg-[var(--bg-card)] p-6 rounded-lg mb-6 border border-[var(--border-primary)]"
     >
       <h3 className="text-lg font-bold mb-6">Shareholdings Patterns</h3>
       <div className="space-y-4">
@@ -21,7 +21,7 @@ const ShareholdingPatterns = () => {
               <span>{item.label}</span>
               <span>{item.value}</span>
             </div>
-            <div className="h-2 bg-[#2a2e39] rounded-full overflow-hidden">
+            <div className="h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
               <div
                 className="h-full"
                 style={{ width: item.value, backgroundColor: item.color }}

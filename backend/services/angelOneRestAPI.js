@@ -89,7 +89,7 @@ class AngelOneRestAPI {
      */
     async fetchExchangeQuotes(exchSeg, stocks) {
         const exchangeConfig = getExchangeConfig(exchSeg);
-        
+
         if (!exchangeConfig) {
             logger.warn(`Unsupported exchange: ${exchSeg}`);
             return [];
@@ -100,10 +100,10 @@ class AngelOneRestAPI {
 
             // Use Angel One LTP Data API
             // API: POST https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/
-            
+
             const tokens = stocks.map(s => `${exchangeConfig.code}:${s.token}`);
             const apiUrl = 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/';
-            
+
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -145,24 +145,26 @@ class AngelOneRestAPI {
                     logger.error(`API JSON Parse Error for ${exchSeg}:`, responseText.substring(0, 200));
                     return [];
                 }
-                
+
                 // Detailed debug logging - FORCE CONSOLE LOG
-                console.log(`🔍 [AngelOneRestAPI] Raw Response for ${exchSeg}:`, JSON.stringify(result).substring(0, 1000)); 
+                console.log(`🔍 [AngelOneRestAPI] Raw Response for ${exchSeg}:`, JSON.stringify(result).substring(0, 1000));
 
                 if (result.status && result.data && result.data.fetched) {
                     logger.info(`API Success for ${exchSeg}: Fetched ${result.data.fetched.length} records`);
-                    
-                    result.data.fetched.forEach((stockData, index) => {
-                        const stock = stocks.find(s => s.token === stockData.token) || stocks[index];
-                        
+
+                    result.data.fetched.forEach((stockData) => {
+                        // Angel One returns token in 'symbolToken' field
+                        const token = stockData.symbolToken || stockData.token;
+                        const stock = stocks.find(s => s.token === token);
+
                         if (stock) {
                             quotes.push({
-                                token: stock.token,
+                                token: token,
                                 exch_seg: exchSeg,
                                 symbol: stock.symbol || stock.name,
-                                ltp: stockData.ltp, // API usually returns actual value, verify if division needed
-                                change: stockData.netChange, // Add net change
-                                percentChange: stockData.percentChange, // Add percent change
+                                ltp: stockData.ltp,
+                                change: stockData.netChange,
+                                percentChange: stockData.percentChange,
                                 open: stockData.open,
                                 high: stockData.high,
                                 low: stockData.low,
@@ -175,7 +177,7 @@ class AngelOneRestAPI {
                 } else {
                     logger.error(`API Error for ${exchSeg}:`, JSON.stringify(result));
                 }
-                
+
             } catch (error) {
                 logger.error(`API Network/Parsing Error for ${exchSeg}:`, error.message);
                 console.error(error);
@@ -195,7 +197,7 @@ class AngelOneRestAPI {
      */
     groupByExchange(stocks) {
         const groups = {};
-        
+
         stocks.forEach(stock => {
             const exchSeg = stock.exch_seg || 'NSE';
             if (!groups[exchSeg]) {
@@ -232,7 +234,7 @@ class AngelOneRestAPI {
             console.log('DEBUG CANDLE ARGS:', JSON.stringify({ exchange, symboltoken, interval, fromdate, todate }));
 
             logger.info(`Fetching candle data: Token=${symboltoken}, Exch=${exchange}, Interval=${interval}, From=${fromdate}, To=${todate}`);
-            
+
             // Validate input
             if (!symboltoken || !interval || !fromdate || !todate) {
                 logger.error('Missing required parameters for getCandleData');
@@ -246,7 +248,7 @@ class AngelOneRestAPI {
                 fromdate,
                 todate
             });
-            
+
             // Log raw response for debugging
             console.log('Raw Candle Data Response:', JSON.stringify(data));
 

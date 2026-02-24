@@ -2,6 +2,7 @@ import Order from '../models/Order.js';
 import { smartApi } from '../config/angelConfig.js';
 import AngelOneCredential from '../models/AngelOneCredential.js';
 import { createLogger } from '../utils/logger.js';
+import { isMarketOpen } from '../utils/marketHours.js';
 
 const logger = createLogger('OrderController');
 
@@ -46,10 +47,7 @@ export const placeOrder = async (req, res) => {
             });
         }
 
-        // 2. Create Order in DB (Pending)
-        // User is assumed to be attached to req.user by auth middleware
-        // For now, if no auth middleware, we might need a dummy user or userId from body
-        // Proceeding with assumption of req.user or getting it from body for dev
+        // 2. Create Order in DB
         const userId = req.user ? req.user._id : req.body.userId;
 
         if (!userId) {
@@ -57,6 +55,29 @@ export const placeOrder = async (req, res) => {
                 success: false,
                 message: "User not authenticated"
             });
+        }
+
+        // --- NEW: SELL VALIDATION ---
+        if (transactiontype === 'SELL') {
+            const completedOrders = await Order.find({
+                userId,
+                tradingsymbol,
+                orderstatus: 'complete'
+            });
+
+            let netQty = 0;
+            completedOrders.forEach(order => {
+                const qty = order.filledShares || order.quantity;
+                if (order.transactiontype === 'BUY') netQty += qty;
+                else netQty -= qty;
+            });
+
+            if (netQty < quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient holdings. You only have ${netQty} shares of ${tradingsymbol}.`
+                });
+            }
         }
 
         const newOrder = new Order({
@@ -70,38 +91,38 @@ export const placeOrder = async (req, res) => {
             producttype,
 
             price,
+            marketPriceAtOrder: marketPrice || price || 0,
             quantity,
             squareoff,
             stoploss,
             trailingstoploss,
             triggerprice,
             tag,
-
         });
+
+        // --- NEW: MARKET HOUR ENFORCEMENT ---
+        const marketOpen = isMarketOpen();
+
+        if (!marketOpen) {
+            newOrder.orderstatus = "pending";
+            newOrder.message = "Market Closed - Order Pending";
+            await newOrder.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "Market is closed. Your order has been placed as PENDING.",
+                data: {
+                    orderId: newOrder._id,
+                    status: "pending"
+                }
+            });
+        }
 
         await newOrder.save();
         logger.info(`Order created in DB: ${newOrder._id}`);
 
         // 3. Place Order via Angel One API
-        /*
-        const orderParams = {
-            variety: variety || "NORMAL",
-            tradingsymbol,
-            symboltoken,
-            transactiontype,
-            exchange,
-            ordertype,
-            producttype,
-            duration: "DAY",
-
-            price: price.toString(),
-            quantity: quantity.toString(),
-            squareoff: squareoff ? squareoff.toString() : "0",
-            stoploss: stoploss ? stoploss.toString() : "0",
-            trailingstoploss: trailingstoploss ? trailingstoploss.toString() : "0",
-            triggerprice: triggerprice ? triggerprice.toString() : "0"
-        };
-        */
+        // ... (API placement logic remains same)
 
         // PAPER TRADING MODE: Simulate Success
         logger.info('PAPER TRADING: Simulating Angel One Order Placement');
@@ -124,17 +145,13 @@ export const placeOrder = async (req, res) => {
             if (response.status && response.data && response.data.orderid) {
                 // Success
                 newOrder.angelOrderId = response.data.orderid;
-                newOrder.uniqueorderid = response.data.uniqueorderid; // Capture unique ID
+                newOrder.uniqueorderid = response.data.uniqueorderid;
 
-                // SIMULATION LOGIC:
-                // MARKET Orders -> execute immediately at current market price
-                // LIMIT Orders -> stay pending (until price match logic is implemented or manual update)
                 if (ordertype === "LIMIT") {
                     newOrder.orderstatus = "pending";
-                    newOrder.averagePrice = price; // Limit price as avg price
+                    newOrder.averagePrice = price;
                     newOrder.message = "Order Placed (Pending)";
                 } else {
-                    // MARKET order: execute at current market price
                     const executionPrice = marketPrice || price || 0;
                     newOrder.orderstatus = "complete";
                     newOrder.averagePrice = executionPrice;

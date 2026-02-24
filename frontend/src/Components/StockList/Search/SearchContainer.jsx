@@ -106,7 +106,7 @@ const SearchContainer = forwardRef(({ onAddStock, onSelectStock, onBuy, onSell }
             {/* When focused, we position it absolutely below the header to cover tabs */}
             <div
                 className={`p-3 z-[100] transition-all duration-200 ${isFocused
-                    ? "absolute top-[48px] left-0 right-0 bg-[#0b0e14]"
+                    ? "absolute top-[48px] left-0 right-0 bg-[var(--bg-main)]"
                     : "relative"
                     }`}
                 ref={containerRef}
@@ -126,7 +126,7 @@ const SearchContainer = forwardRef(({ onAddStock, onSelectStock, onBuy, onSell }
 
             {/* Full Screen Overlay Results */}
             {isFocused && (
-                <div className="absolute top-[110px] left-0 right-0 bottom-0 bg-[#0b0e14] z-[90] overflow-y-auto customscrollbar border-t border-[#2a2e39] flex flex-col">
+                <div className="absolute top-[110px] left-0 right-0 bottom-0 bg-[var(--bg-main)] z-[90] overflow-y-auto customscrollbar border-t border-[var(--border-primary)] flex flex-col">
 
                     {/* Filter Tabs */}
                     <SearchFilters

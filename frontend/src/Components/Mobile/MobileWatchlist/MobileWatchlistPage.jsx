@@ -205,7 +205,7 @@ const MobileWatchlistPage = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0b0e14]">
+        <div className="flex flex-col h-full bg-[var(--bg-main)]">
             <CreateWatchlistModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
@@ -233,14 +233,14 @@ const MobileWatchlistPage = () => {
                 {isLoading ? (
                     <div className="px-0">
                         {Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-[#2a2e39]">
+                            <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-[var(--border-primary)]">
                                 <div className="flex flex-col gap-2">
-                                    <div className="h-3.5 w-28 bg-[#1e222d] rounded animate-pulse"></div>
-                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-3.5 w-28 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <div className="h-3.5 w-16 bg-[#1e222d] rounded animate-pulse"></div>
-                                    <div className="h-2.5 w-20 bg-[#1e222d] rounded animate-pulse"></div>
+                                    <div className="h-3.5 w-16 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
+                                    <div className="h-2.5 w-20 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
                                 </div>
                             </div>
                         ))}

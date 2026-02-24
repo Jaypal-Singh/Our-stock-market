@@ -3,16 +3,19 @@ import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'ligh
 import { useSocket } from '../../context/SocketContext';
 import axios from 'axios';
 import { parseTickData } from '../../utils/stockDataParser';
+import { useTheme } from '../../context/ThemeContext';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) => {
+const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) => {
     const chartContainerRef = useRef(null);
     const chartRef = useRef(null);
     const seriesRef = useRef(null);
     const volumeSeriesRef = useRef(null);
     const socketRef = useRef(null);
 
+    const { socket, isConnected } = useSocket();
+    const { theme } = useTheme();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -71,14 +74,17 @@ const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) 
         }
 
         try {
-            const chart = createChart(container, {
+            // Get colors from CSS variables if possible, otherwise use theme defaults
+            const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+            const chartOptions = {
                 layout: {
-                    background: { type: ColorType.Solid, color: '#131722' },
-                    textColor: '#d1d4dc',
+                    background: { type: ColorType.Solid, color: isDark ? '#131722' : '#ffffff' },
+                    textColor: isDark ? '#d1d4dc' : '#0f172a',
                 },
                 grid: {
-                    vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-                    horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+                    vertLines: { color: isDark ? 'rgba(42, 46, 57, 0.3)' : 'rgba(226, 232, 240, 0.4)' },
+                    horzLines: { color: isDark ? 'rgba(42, 46, 57, 0.3)' : 'rgba(226, 232, 240, 0.4)' },
                 },
                 width: width,
                 height: height,
@@ -86,7 +92,9 @@ const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) 
                     timeVisible: true,
                     secondsVisible: false,
                 },
-            });
+            };
+
+            const chart = createChart(container, chartOptions);
 
             // --- Add Series ---
             const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -168,7 +176,7 @@ const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) 
                 isChartReadyRef.current = false;
             }
         };
-    }, []); // Run once on mount.
+    }, [theme]); // Re-initialize on theme change.
 
     // -------------------------------------------------------------------------
     // 2. Fetch Data (History)
@@ -345,13 +353,15 @@ const TradingViewChart = ({ stock, interval = 'FIVE_MINUTE', onCrosshairMove }) 
     return (
         <div className="w-full h-full relative" style={{ minHeight: '100%' }}>
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#131722] z-10">
-                    <span className="text-gray-400 text-sm animate-pulse">Loading Chart...</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg-main)]/80 backdrop-blur-sm z-30 transition-all duration-500">
+                    <div className="w-8 h-8 border-2 border-[var(--accent-primary)]/20 border-t-[var(--accent-primary)] rounded-full animate-spin mb-3 shadow-[0_0_15px_rgba(79,70,229,0.4)]"></div>
+                    <span className="text-[var(--text-primary)] text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Preparing Charts</span>
                 </div>
             )}
             {error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#131722] z-10">
-                    <span className="text-red-400 text-sm">{error}</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg-main)] z-30 p-6 text-center">
+                    <div className="text-[#f23645] mb-2 opacity-80 underline decoration-2 underline-offset-4">Chart Error</div>
+                    <span className="text-[var(--text-muted)] text-[11px] font-bold">{error}</span>
                 </div>
             )}
             <div ref={chartContainerRef} className="w-full h-full" />
