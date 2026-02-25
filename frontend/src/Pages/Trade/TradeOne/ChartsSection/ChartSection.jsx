@@ -115,9 +115,9 @@ function ChartSection() {
 
   // Read from ref for display
   const live = liveDataRef.current;
-  const displayOpen = hoveredCandle ? hoveredCandle.open : live.open;
-  const displayHigh = hoveredCandle ? hoveredCandle.high : live.high;
-  const displayLow = hoveredCandle ? hoveredCandle.low : live.low;
+  const displayOpen = hoveredCandle ? hoveredCandle.open : (live.open || live.ltp);
+  const displayHigh = hoveredCandle ? hoveredCandle.high : (live.high || live.ltp);
+  const displayLow = hoveredCandle ? hoveredCandle.low : (live.low || live.ltp);
   const displayClose = hoveredCandle ? hoveredCandle.close : live.ltp;
   const liveLtp = live.ltp;
   const liveChange = live.change;

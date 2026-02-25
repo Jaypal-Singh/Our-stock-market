@@ -18,6 +18,7 @@ const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) =
     const { theme } = useTheme();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [noDataMsg, setNoDataMsg] = useState(null);
 
     // Data refs to hold state without causing re-renders during updates
     const candleDataRef = useRef([]);
@@ -251,6 +252,12 @@ const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) =
                     // Update Refs & Chart
                     candleDataRef.current = uniqueData;
 
+                    if (uniqueData.length === 0) {
+                        setNoDataMsg("No historical chart data available for this contract. Plotting live ticks instead...");
+                    } else {
+                        setNoDataMsg(null);
+                    }
+
                     if (chartRef.current && seriesRef.current && volumeSeriesRef.current) {
                         console.log(`[TvChart] Setting Data: ${uniqueData.length} candles. Sample:`, uniqueData[0]);
                         seriesRef.current.setData(uniqueData);
@@ -303,6 +310,9 @@ const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) =
             try {
                 const parsedTick = parseTickData(tickData);
                 if (parsedTick && parsedTick.token === stock.token) {
+
+                    if (noDataMsg) setNoDataMsg(null); // Clear the warning once live ticks arrive!
+
                     const price = parsedTick.ltp;
                     const timestamp = parsedTick.timestamp || Date.now();
                     const barTime = getBarTime(timestamp, interval);
@@ -362,6 +372,16 @@ const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) =
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg-main)] z-30 p-6 text-center">
                     <div className="text-[#f23645] mb-2 opacity-80 underline decoration-2 underline-offset-4">Chart Error</div>
                     <span className="text-[var(--text-muted)] text-[11px] font-bold">{error}</span>
+                </div>
+            )}
+            {!error && !isLoading && noDataMsg && candleDataRef.current?.length === 0 && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-2xl p-4 rounded text-center z-20 w-3/4 max-w-[300px]">
+                    <div className="text-[var(--text-muted)] text-xs mb-1 opacity-80 font-bold uppercase tracking-widest break-words leading-relaxed">
+                        No Database History
+                    </div>
+                    <div className="text-[var(--text-primary)] text-[10px] mt-2 leading-relaxed opacity-70">
+                        {noDataMsg}
+                    </div>
                 </div>
             )}
             <div ref={chartContainerRef} className="w-full h-full" />

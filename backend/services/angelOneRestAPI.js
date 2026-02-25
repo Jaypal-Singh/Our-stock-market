@@ -97,90 +97,90 @@ class AngelOneRestAPI {
 
         try {
             const quotes = [];
-
-            // Use Angel One LTP Data API
-            // API: POST https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/
-
-            const tokens = stocks.map(s => `${exchangeConfig.code}:${s.token}`);
             const apiUrl = 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/';
+            
+            // Angel One restricts maximum 50 tokens per request
+            const CHUNK_SIZE = 50;
+            const chunks = [];
+            for (let i = 0; i < stocks.length; i += CHUNK_SIZE) {
+                chunks.push(stocks.slice(i, i + CHUNK_SIZE));
+            }
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${this.credentials.jwtToken}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-UserType': 'USER',
-                        'X-SourceID': 'WEB',
-                        'X-ClientLocalIP': '127.0.0.1',
-                        'X-ClientPublicIP': '127.0.0.1',
-                        'X-MACAddress': 'MAC_ADDRESS',
-                        'X-PrivateKey': this.credentials.apiKey
-                    },
-                    body: JSON.stringify({
-                        mode: 'FULL',
-                        exchangeTokens: {
-                            [exchSeg]: stocks.map(s => s.token) // Use "NSE", "NFO" etc. as key
-                        }
-                    })
-                });
+            logger.info(`Fetching quotes for ${exchSeg} in ${chunks.length} batches...`);
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    logger.error(`API HTTP Error ${response.status} for ${exchSeg}:`, errorText);
-                    return [];
-                }
-
-                const responseText = await response.text();
-                if (!responseText) {
-                    logger.error(`API Error for ${exchSeg}: Empty response body`);
-                    return [];
-                }
-
-                let result;
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkStocks = chunks[i];
                 try {
-                    result = JSON.parse(responseText);
-                } catch (e) {
-                    logger.error(`API JSON Parse Error for ${exchSeg}:`, responseText.substring(0, 200));
-                    return [];
-                }
-
-                // Detailed debug logging - FORCE CONSOLE LOG
-                console.log(`🔍 [AngelOneRestAPI] Raw Response for ${exchSeg}:`, JSON.stringify(result).substring(0, 1000));
-
-                if (result.status && result.data && result.data.fetched) {
-                    logger.info(`API Success for ${exchSeg}: Fetched ${result.data.fetched.length} records`);
-
-                    result.data.fetched.forEach((stockData) => {
-                        // Angel One returns token in 'symbolToken' field
-                        const token = stockData.symbolToken || stockData.token;
-                        const stock = stocks.find(s => s.token === token);
-
-                        if (stock) {
-                            quotes.push({
-                                token: token,
-                                exch_seg: exchSeg,
-                                symbol: stock.symbol || stock.name,
-                                ltp: stockData.ltp,
-                                change: stockData.netChange,
-                                percentChange: stockData.percentChange,
-                                open: stockData.open,
-                                high: stockData.high,
-                                low: stockData.low,
-                                close: stockData.close,
-                                volume: stockData.volume || 0,
-                                timestamp: Date.now()
-                            });
-                        }
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.credentials.jwtToken}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-UserType': 'USER',
+                            'X-SourceID': 'WEB',
+                            'X-ClientLocalIP': '127.0.0.1',
+                            'X-ClientPublicIP': '127.0.0.1',
+                            'X-MACAddress': 'MAC_ADDRESS',
+                            'X-PrivateKey': this.credentials.apiKey
+                        },
+                        body: JSON.stringify({
+                            mode: 'FULL',
+                            exchangeTokens: {
+                                [exchSeg]: chunkStocks.map(s => s.token)
+                            }
+                        })
                     });
-                } else {
-                    logger.error(`API Error for ${exchSeg}:`, JSON.stringify(result));
-                }
 
-            } catch (error) {
-                logger.error(`API Network/Parsing Error for ${exchSeg}:`, error.message);
-                console.error(error);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        logger.error(`API HTTP Error ${response.status} for ${exchSeg} (Batch ${i+1}):`, errorText);
+                        continue;
+                    }
+
+                    const responseText = await response.text();
+                    if (!responseText) {
+                        logger.error(`API Error for ${exchSeg} (Batch ${i+1}): Empty response body`);
+                        continue;
+                    }
+
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (e) {
+                        logger.error(`API JSON Parse Error for ${exchSeg} (Batch ${i+1}):`, responseText.substring(0, 200));
+                        continue;
+                    }
+
+                    if (result.status && result.data && result.data.fetched) {
+                        result.data.fetched.forEach((stockData) => {
+                            const token = stockData.symbolToken || stockData.token;
+                            const stock = chunkStocks.find(s => s.token === token);
+
+                            if (stock) {
+                                quotes.push({
+                                    token: token,
+                                    exch_seg: exchSeg,
+                                    symbol: stock.symbol || stock.name,
+                                    ltp: stockData.ltp,
+                                    change: stockData.netChange,
+                                    percentChange: stockData.percentChange,
+                                    open: stockData.open,
+                                    high: stockData.high,
+                                    low: stockData.low,
+                                    close: stockData.close,
+                                    volume: stockData.volume || 0,
+                                    timestamp: Date.now()
+                                });
+                            }
+                        });
+                    } else {
+                        logger.error(`API Error for ${exchSeg} (Batch ${i+1}):`, JSON.stringify(result));
+                    }
+
+                } catch (batchError) {
+                    logger.error(`Batch ${i+1} Network/Parsing Error for ${exchSeg}:`, batchError.message);
+                }
             }
 
             logger.info(`Processed ${quotes.length} quotes for ${exchSeg}`);
