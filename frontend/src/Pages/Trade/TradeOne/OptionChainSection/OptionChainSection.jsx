@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, RefreshCw, AlertCircle, ChevronDown, Clock, Info } from "lucide-react";
+import { ArrowLeft, RefreshCw, AlertCircle, ChevronDown, Clock, Info, BarChart2, Star, Plus } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAngelOneSocket from "../../../../hooks/useAngelOneSocket";
+import BuyWindow from "../../../../Components/Buy&SellWindow/BuyWindow/BuyWindow";
+import SellWindow from "../../../../Components/Buy&SellWindow/SellWindow/SellWindow";
 
-// ─── F&O Indices available for Option Greeks ──────────────────────────────────
-// expiryDay = JS getDay() value: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+// ─── Popular Indices (Still used for the dropdown defaults) ─────────────────────
 const FNO_INDICES = [
-  { name: "NIFTY", label: "NIFTY 50", expiryDay: 4 }, // Thursday
-  { name: "BANKNIFTY", label: "BANK NIFTY", expiryDay: 3 }, // Wednesday
-  { name: "FINNIFTY", label: "FIN NIFTY", expiryDay: 2 }, // Tuesday
-  { name: "MIDCPNIFTY", label: "MIDCAP NIFTY", expiryDay: 1 }, // Monday
-  { name: "SENSEX", label: "SENSEX", expiryDay: 5 }, // Friday
+  { name: "NIFTY", label: "NIFTY 50" },
+  { name: "BANKNIFTY", label: "BANK NIFTY" },
+  { name: "FINNIFTY", label: "FIN NIFTY" },
+  { name: "MIDCPNIFTY", label: "MIDCAP NIFTY" },
+  { name: "SENSEX", label: "SENSEX" },
 ];
 
 // ─── Market hours helper (IST) ────────────────────────────────────────────────
@@ -45,10 +46,17 @@ function OptionChain() {
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes("/trade/option-chain");
 
-  // Index/stock selector — only use stock name if it's actually an FNO index
+  // Index/stock selector
   const stockName = stock?.name ?? stock?.symbol ?? "";
-  const defaultIndex = FNO_INDICES.some(idx => idx.name === stockName) ? stockName : "NIFTY";
+  // Default to the provided stock, otherwise default to NIFTY
+  const defaultIndex = stockName || "NIFTY";
   const [selectedIndex, setSelectedIndex] = useState(defaultIndex);
+
+  // Sync selected index if the user clicks a different stock in the watchlist
+  useEffect(() => {
+    setSelectedIndex(defaultIndex);
+  }, [defaultIndex]);
+
   const underlyingName = selectedIndex;
 
   const [allExpiries, setAllExpiries] = useState({});
@@ -59,6 +67,7 @@ function OptionChain() {
 
   // Connect live websocket data
   const [optionTokens, setOptionTokens] = useState([]);
+  const [underlyingInfo, setUnderlyingInfo] = useState(null);
   const { stocks: liveOptionData } = useAngelOneSocket(optionTokens);
 
   const [loading, setLoading] = useState(false);
@@ -68,19 +77,30 @@ function OptionChain() {
   const [cooldown, setCooldown] = useState(0);
   const lastFetchTime = React.useRef(0);
 
+  // Buy/Sell Overlays
+  const [showBuyWindow, setShowBuyWindow] = useState(false);
+  const [showSellWindow, setShowSellWindow] = useState(false);
+  const [selectedStockForOrder, setSelectedStockForOrder] = useState(null);
+
+  const [hoveredSide, setHoveredSide] = useState(null); // { index: number, side: 'CE' | 'PE' }
+
   const marketOpen = useMemo(() => isMarketOpen(), []);
 
-  // Fetch valid option chain expiries from backend on mount
+  // Fetch valid option chain expiries from backend when underlyingName changes
   useEffect(() => {
-    fetch("/api/option-chain/expiries")
+    if (!underlyingName) return;
+    fetch(`/api/option-chain/custom/expiries/${underlyingName}`)
       .then(res => res.json())
       .then(json => {
         if (json.success && json.data) {
-          setAllExpiries(json.data);
+          setAllExpiries(prev => ({
+            ...prev,
+            [underlyingName]: json.data
+          }));
         }
       })
       .catch(err => console.error("Failed to fetch expiries:", err));
-  }, []);
+  }, [underlyingName]);
 
   // When index changes, expiries regenerate — reset selected expiry to first
   useEffect(() => {
@@ -89,7 +109,7 @@ function OptionChain() {
     }
   }, [selectedIndex, expiries, expiry]);
 
-  const COOLDOWN_SEC = 10; // Minimum seconds between API calls
+  const COOLDOWN_SEC = 5; // Minimum seconds between API calls
 
   const isIndexSupported = useMemo(() => {
     return FNO_INDICES.some(idx => idx.name === selectedIndex);
@@ -100,13 +120,6 @@ function OptionChain() {
 
     // Reset error when starting new fetch
     setError(null);
-
-    // If it's a stock and not in our supported list, show early warning
-    if (!isIndexSupported) {
-      setError(`Greeks are currently only supported for Indices (NIFTY, BANKNIFTY, etc.). Data for "${selectedIndex}" may not be available from the API.`);
-      setRows([]);
-      return;
-    }
 
     // Enforce cooldown to avoid rate limits
     const elapsed = (Date.now() - lastFetchTime.current) / 1000;
@@ -126,7 +139,10 @@ function OptionChain() {
     lastFetchTime.current = Date.now();
 
     try {
-      const res = await fetch("/api/option-chain/greeks", {
+      // Fetch data using our Custom Data Builder, removing Greek dependencies
+      const endpoint = "/api/option-chain/custom/chain";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: underlyingName, expirydate: expiry }),
@@ -145,11 +161,15 @@ function OptionChain() {
 
         // Extract real-time streaming tokens for WebSockets
         const newTokens = [];
+        if (json.underlyingToken) {
+          newTokens.push({ token: json.underlyingToken, exch_seg: json.underlyingExchSeg || 'NSE' });
+        }
         optionData.forEach(row => {
           if (row.CE && row.CE.token) newTokens.push({ token: row.CE.token, exch_seg: row.CE.exch_seg });
           if (row.PE && row.PE.token) newTokens.push({ token: row.PE.token, exch_seg: row.PE.exch_seg });
         });
         setOptionTokens(newTokens);
+        setUnderlyingInfo({ token: json.underlyingToken, exch_seg: json.underlyingExchSeg });
 
         setLastFetched(new Date());
         setCachedAt(json.fromCache && json.cachedAt ? new Date(json.cachedAt) : null);
@@ -158,6 +178,7 @@ function OptionChain() {
       setError("Network error: " + err.message);
       setRows([]);
       setOptionTokens([]);
+      setUnderlyingInfo(null);
     } finally {
       setLoading(false);
     }
@@ -169,27 +190,131 @@ function OptionChain() {
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
   const ColHeader = ({ label, cls = "" }) => (
-    <th className={`p-2 min-w-[70px] whitespace-nowrap ${cls}`}>{label}</th>
+    <th className={`p-2 font-medium bg-[#14151a] min-w-[70px] whitespace-nowrap ${cls}`}>{label}</th>
   );
 
-  const CallCell = ({ value, cls = "" }) => (
-    <td className={`p-2 text-[#089981] ${cls}`}>{value}</td>
-  );
+  // ─── Actions ──────────────────────────────────────────────────────────────
+  const handleAction = (action, optRaw, optLive) => {
+    if (!optRaw?.token) return;
 
-  const PutCell = ({ value, cls = "" }) => (
-    <td className={`p-2 text-[#f23645] ${cls}`}>{value}</td>
-  );
+    // Fallback constructed stock object for actions
+    const stockObj = {
+      token: optRaw.token,
+      name: optRaw.symbol,
+      symbol: optRaw.symbol,
+      exch_seg: optRaw.exch_seg,
+      lotsize: optRaw.lotsize,
+      price: optLive?.ltp || 0,
+      ltp: optLive?.ltp || 0,
+      change: optLive?.change || 0,
+      percent: optLive?.changePercent || 0,
+      isUp: optLive?.changePercent >= 0
+    };
+
+    if (action === 'buy') {
+      setSelectedStockForOrder(stockObj);
+      setShowBuyWindow(true);
+      setShowSellWindow(false);
+    } else if (action === 'sell') {
+      setSelectedStockForOrder(stockObj);
+      setShowSellWindow(true);
+      setShowBuyWindow(false);
+    } else if (action === 'chart') {
+      navigate('/trade/chart', { state: { stock: stockObj } });
+    } else if (action === 'watchlist') {
+      // Small trigger to add to watchlist if we had a global context for it, or just a direct API call
+      // For now we will ping the default watchlist
+      fetch('/api/watchlist/Default Watchlist/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: stockObj.name,
+          symbol: stockObj.symbol,
+          token: stockObj.token,
+          exch_seg: stockObj.exch_seg,
+          instrumenttype: stockObj.exch_seg.includes('FO') ? 'OPTIDX' : 'EQ',
+          expiry: expiry
+        })
+      }).then(r => r.json()).then(res => {
+        if (res.success) alert(`${stockObj.symbol} added to Watchlist!`);
+        else alert(res.message);
+      }).catch(e => console.error(e));
+    }
+  };
+
+  const ActionTooltip = ({ optRaw, optLive }) => {
+    if (!optRaw?.token) return null;
+    return (
+      <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-1 bg-[#1e222d] border border-[#2a2e39] rounded px-1 py-1 shadow-lg z-20">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleAction('buy', optRaw, optLive); }}
+          className="bg-[#089981]/10 text-[#089981] hover:bg-[#089981] hover:text-white px-2 py-0.5 rounded text-[10px] font-bold transition-colors">
+          B
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleAction('sell', optRaw, optLive); }}
+          className="bg-[#f23645]/10 text-[#f23645] hover:bg-[#f23645] hover:text-white px-2 py-0.5 rounded text-[10px] font-bold transition-colors">
+          S
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleAction('chart', optRaw, optLive); }}
+          className="text-[#868993] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Chart">
+          <BarChart2 size={12} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleAction('watchlist', optRaw, optLive); }}
+          className="text-[#868993] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Add to Watchlist">
+          <Plus size={12} />
+        </button>
+      </div>
+    );
+  };
+
+  const underlyingLive = underlyingInfo?.token ? liveOptionData.find(s => s.token === underlyingInfo.token) : null;
+  const currentSpotPrice = underlyingLive?.ltp || stock?.price;
 
   return (
     <div
-      className={`bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans ${isMobileView ? "h-full flex flex-col" : "p-4 min-h-full"
-        }`}
+      className={`bg-[#14151a] text-[#b2b5be] font-sans ${isMobileView ? "h-full flex flex-col" : "p-4 min-h-full"
+        } relative`}
     >
+      {/* ── Overlays ── */}
+      {showBuyWindow && selectedStockForOrder && (
+        <BuyWindow
+          uid={selectedStockForOrder.token}
+          stockName={selectedStockForOrder.name}
+          stockSymbol={selectedStockForOrder.symbol}
+          stockPrice={selectedStockForOrder.price || 0}
+          stockChange={selectedStockForOrder.change || 0}
+          stockChangePercent={selectedStockForOrder.percent || 0}
+          onClose={() => setShowBuyWindow(false)}
+          onSwitchToSell={() => {
+            setShowBuyWindow(false);
+            setShowSellWindow(true);
+          }}
+        />
+      )}
+      {showSellWindow && selectedStockForOrder && (
+        <SellWindow
+          uid={selectedStockForOrder.token}
+          stockName={selectedStockForOrder.name}
+          stockSymbol={selectedStockForOrder.symbol}
+          stockPrice={selectedStockForOrder.price || 0}
+          stockChange={selectedStockForOrder.change || 0}
+          stockChangePercent={selectedStockForOrder.percent || 0}
+          onClose={() => setShowSellWindow(false)}
+          onSwitchToBuy={() => {
+            setShowSellWindow(false);
+            setShowBuyWindow(true);
+          }}
+        />
+      )}
+
       {/* ── Mobile Header ── */}
       {isMobileView && (
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-card)] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#1e222d] shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="text-[var(--text-secondary)]">
+            <button onClick={() => navigate(-1)} className="text-[#b2b5be]">
               <ArrowLeft size={24} />
             </button>
             <div>
@@ -198,8 +323,8 @@ function OptionChain() {
               </h1>
               {stock && (
                 <div className="text-[10px] font-bold flex items-center gap-1">
-                  <span className="text-[var(--text-muted)]">{stock.exchange}</span>
-                  <span className="text-[var(--text-secondary)]">•</span>
+                  <span className="text-[#787b86]">{stock.exchange}</span>
+                  <span className="text-[#787b86]">•</span>
                   <span className="text-[var(--text-primary)]">₹{stock.price}</span>
                   <span className={stock.isUp ? "text-[#089981]" : "text-[#f23645]"}>
                     {stock.percent}%
@@ -216,50 +341,36 @@ function OptionChain() {
 
         {/* ── Toolbar ── */}
         <div
-          className={`flex flex-wrap justify-between items-center gap-2 mb-3 ${isMobileView ? "p-4 pb-0" : ""
-            }`}
+          className={`flex flex-wrap items-center gap-2 mb-3 bg-[#14151a] ${isMobileView ? "p-4 pb-0" : ""}`}
         >
           {/* Title */}
           {!isMobileView && (
-            <h3 className="text-sm font-bold uppercase tracking-wide">
-              {underlyingName} — Option Chain Greeks
+            <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+              {underlyingName}
+              <span className="ml-2 px-1 text-[10px] bg-[#1e222d] text-[#787b86] border border-[#2a2e39] rounded">
+                {stock?.exchange || "NSE"}
+              </span>
+              <span className="ml-2">
+                {stock?.price?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className={`ml-2 text-xs ${stock?.isUp ? "text-[#089981]" : "text-[#f23645]"}`}>
+                {stock?.change && stock?.change > 0 ? "+" : ""}{stock?.change?.toFixed(2)} ({stock?.percent}%)
+              </span>
             </h3>
           )}
 
-          <div className="flex items-center gap-3 ml-auto">
-            {/* Index Selector */}
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="text-[var(--text-muted)]">Index:</span>
-              <div className="relative">
-                <select
-                  value={selectedIndex}
-                  onChange={(e) => setSelectedIndex(e.target.value)}
-                  className="appearance-none bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-2 pr-6 py-1 outline-none text-[var(--text-secondary)] cursor-pointer"
-                >
-                  {FNO_INDICES.map((idx) => (
-                    <option key={idx.name} value={idx.name}>
-                      {idx.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={12}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
-                />
-              </div>
-            </div>
-
+          <div className="flex items-center gap-3 ml-auto text-[11px]">
             {/* Expiry Selector */}
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="text-[var(--text-muted)]">Expiry:</span>
+            <div className="flex items-center gap-1 font-bold">
+              <span className="text-[#787b86]">Expiry:</span>
               <div className="relative">
                 <select
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  className="appearance-none bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-2 pr-6 py-1 outline-none text-[var(--text-secondary)] cursor-pointer"
+                  className="appearance-none bg-transparent border border-[#2a2e39] rounded px-2 pr-6 py-1 outline-none text-[#d1d4dc] cursor-pointer"
                 >
                   {expiries.map((ex) => (
-                    <option key={ex} value={ex}>
+                    <option key={ex} value={ex} className="bg-[#1e222d]">
                       {formatExpiry(ex)}
                     </option>
                   ))}
@@ -275,7 +386,7 @@ function OptionChain() {
             <button
               onClick={fetchGreeks}
               disabled={loading || cooldown > 0}
-              className="flex items-center gap-1 text-[11px] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-2 py-1 hover:border-[var(--accent-primary)] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 text-[11px] font-bold border border-[#2a2e39] text-[#2962ff] rounded px-3 py-1 hover:bg-[#2962ff] hover:text-white hover:border-[#2962ff] transition-colors disabled:opacity-40"
             >
               <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
               {loading ? "Loading…" : cooldown > 0 ? `Wait ${cooldown}s` : "Refresh"}
@@ -283,29 +394,15 @@ function OptionChain() {
           </div>
         </div>
 
-        {/* ── Last updated / Cache indicator ── */}
-        {lastFetched && !loading && (
-          <div className={`text-[10px] mb-2 flex items-center gap-2 ${isMobileView ? "px-4" : ""}`}>
-            <span className="text-[var(--text-muted)]">
-              Updated: {lastFetched.toLocaleTimeString()}
-            </span>
-            {cachedAt && (
-              <span className="bg-[#2a2000] text-[#f0b90b] px-2 py-0.5 rounded text-[9px] font-medium">
-                📊 Last closing data ({new Date(cachedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })})
-              </span>
-            )}
-          </div>
-        )}
-
         {/* ── Market Closed Banner ── */}
         {!marketOpen && (
           <div
-            className={`flex items-start gap-2 bg-[var(--bg-secondary)] border border-[var(--accent-primary)]/30 rounded p-3 text-[11px] text-[var(--accent-primary)] mb-3 ${isMobileView ? "mx-4" : ""}`}
+            className={`flex items-start gap-2 bg-[#2a2000] border border-[#f0b90b]/40 rounded p-3 text-[11px] text-[#f0b90b] mb-3 ${isMobileView ? "mx-4" : ""}`}
           >
             <Clock size={14} className="shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold">Market is closed.</span>{" "}
-              <span className="text-[var(--text-muted)]">Option Greeks data is only available during market hours (Mon–Fri, 9:15 AM – 3:30 PM IST).</span>
+              <span className="text-[#b2b5be]">Option Data is only available during market hours (Mon–Fri, 9:15 AM – 3:30 PM IST).</span>
             </div>
           </div>
         )}
@@ -313,7 +410,7 @@ function OptionChain() {
         {/* ── Error Banner ── */}
         {error && (
           <div
-            className={`flex items-start gap-2 bg-[var(--bg-secondary)] border border-[#f23645]/40 rounded p-3 text-[11px] text-[#f23645] mb-3 ${isMobileView ? "mx-4" : ""}`}
+            className={`flex items-start gap-2 bg-[#1e222d] border border-[#f23645]/40 rounded p-3 text-[11px] text-[#f23645] mb-3 ${isMobileView ? "mx-4" : ""}`}
           >
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <span>
@@ -323,6 +420,7 @@ function OptionChain() {
             </span>
           </div>
         )}
+
         {/* ── Loading Skeleton ── */}
         {loading && rows.length === 0 && (
           <div className={`space-y-1 ${isMobileView ? "px-4" : ""}`}>
@@ -331,7 +429,7 @@ function OptionChain() {
               .map((_, i) => (
                 <div
                   key={i}
-                  className="h-8 bg-[var(--bg-secondary)] rounded animate-pulse"
+                  className="h-8 bg-[#1e222d] rounded animate-pulse"
                 />
               ))}
           </div>
@@ -341,42 +439,26 @@ function OptionChain() {
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto overflow-y-auto customscrollbar flex-1">
             <table className="w-full text-[11px] text-center border-collapse min-w-[800px]">
-              <thead className="sticky top-0 z-10">
+              <thead className="sticky top-0 z-10 bg-[#14151a]">
                 {/* Group header */}
-                <tr className="bg-[var(--bg-secondary)] border-y border-[var(--border-primary)]">
-                  <th
-                    colSpan="6"
-                    className="py-2 border-r border-[var(--border-primary)] text-[#089981] tracking-widest font-bold"
-                  >
-                    CALL
+                <tr className="border-b border-[#2a2e39] text-[#b2b5be]">
+                  <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">CALL</th>
+                  <th className="py-2 px-3 bg-[#1e222d] text-center border-x border-[#2a2e39] text-[10px] w-28 whitespace-nowrap text-[#787b86]">
+                    LTP & OI
                   </th>
-                  <th className="py-2 text-[var(--text-primary)] bg-[var(--bg-card)] px-3 whitespace-nowrap">
-                    STRIKE
-                  </th>
-                  <th
-                    colSpan="6"
-                    className="py-2 border-l border-[var(--border-primary)] text-[#f23645] tracking-widest font-bold"
-                  >
-                    PUT
-                  </th>
+                  <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">PUT</th>
                 </tr>
                 {/* Column headers */}
-                <tr className="bg-[var(--bg-card)] text-[var(--text-muted)] border-b border-[var(--border-primary)]">
-                  <ColHeader label="Vega" />
-                  <ColHeader label="Gamma" />
-                  <ColHeader label="Theta" />
-                  <ColHeader label="Delta" />
-                  <ColHeader label="IV" />
-                  <ColHeader label="LTP" cls="border-r border-[var(--border-primary)] font-bold text-[var(--text-primary)]" />
-                  <th className="p-2 bg-[var(--bg-secondary)] text-[var(--text-primary)] min-w-[80px] whitespace-nowrap">
-                    Price
-                  </th>
-                  <ColHeader label="LTP" cls="border-l border-[var(--border-primary)] font-bold text-[var(--text-primary)]" />
-                  <ColHeader label="IV" />
-                  <ColHeader label="Delta" />
-                  <ColHeader label="Theta" />
-                  <ColHeader label="Gamma" />
-                  <ColHeader label="Vega" />
+                <tr className="text-[#787b86] border-b border-[#2a2e39] text-[10px] font-medium">
+                  <ColHeader label="Volume" cls="text-left" />
+                  <ColHeader label="OI Chng.(Chng%)" cls="text-right" />
+                  <ColHeader label="OI" cls="text-right" />
+                  <ColHeader label="LTP (LTP Chng%)" cls="text-right" />
+                  <th className="p-2 bg-[#1e222d] text-[var(--text-primary)] border-x border-[#2a2e39] font-medium">Strike</th>
+                  <ColHeader label="LTP (LTP Chng%)" cls="text-left" />
+                  <ColHeader label="OI" cls="text-left" />
+                  <ColHeader label="OI Chng.(Chng%)" cls="text-left" />
+                  <ColHeader label="Volume" cls="text-right" />
                 </tr>
               </thead>
               <tbody>
@@ -390,36 +472,91 @@ function OptionChain() {
                   const ceLtp = ceLiveData?.ltp ?? "—";
                   const peLtp = peLiveData?.ltp ?? "—";
 
+                  // Calculate LTP Change dynamically
+                  const ceChangePercent = ceLiveData?.changePercent ?? 0;
+                  const peChangePercent = peLiveData?.changePercent ?? 0;
+
+                  // Extract Volume from live data, otherwise fallback to DB data or '—'
+                  const ceVolume = ceLiveData?.volume ?? ce.tradeVolume ?? "—";
+                  const peVolume = peLiveData?.volume ?? pe.tradeVolume ?? "—";
+
+                  // Format volume into K/M/Cr
+                  const formatVol = (v) => {
+                    if (v === "—" || !v) return "—";
+                    if (v >= 10000000) return (v / 10000000).toFixed(2) + 'Cr';
+                    if (v >= 100000) return (v / 100000).toFixed(2) + 'L';
+                    if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                    return v.toString();
+                  };
+
+                  // Define ATM based on closest distance to the underlying true spot price
+                  let isAtm = false;
+                  if (currentSpotPrice && row.strikePrice) {
+                    const closestStrike = rows.reduce((prev, curr) => {
+                      return (Math.abs(curr.strikePrice - currentSpotPrice) < Math.abs(prev.strikePrice - currentSpotPrice) ? curr : prev);
+                    });
+                    isAtm = closestStrike.strikePrice === row.strikePrice;
+                  }
+
                   return (
-                    <tr
-                      key={i}
-                      className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-                    >
-                      {/* CALL side */}
-                      <CallCell value={fmt4(ce.vega)} />
-                      <CallCell value={fmt4(ce.gamma)} />
-                      <CallCell value={fmt4(ce.theta)} />
-                      <CallCell value={fmt4(ce.delta)} />
-                      <CallCell value={fmt2(ce.impliedVolatility)} />
-                      <td className="p-2 font-bold text-[#089981] border-r border-[var(--border-primary)]">
-                        {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
-                      </td>
+                    <React.Fragment key={i}>
+                      {isAtm && (
+                        <tr>
+                          <td colSpan="9" className="p-0 h-[2px] bg-[#f23645] relative">
+                            <div className="absolute top-[-8px] right-[calc(50%-40px)] bg-[#1e222d] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10">
+                              {Number(currentSpotPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
 
-                      {/* Strike */}
-                      <td className="p-2 bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)] whitespace-nowrap">
-                        {Number(row.strikePrice).toLocaleString("en-IN")}
-                      </td>
+                      <tr
+                        className="border-b border-[#2a2e39] hover:bg-[#1a1c24] transition-colors leading-5 group"
+                        onMouseLeave={() => setHoveredSide(null)}
+                      >
+                        {/* ──────────────── CALL Side ──────────────── */}
+                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'CE' })}>
+                          <div className="flex w-full h-full items-center">
+                            <div className="flex-1 p-2 text-left text-[#b2b5be] pl-4">{formatVol(ceVolume)}</div>
+                            {/* Live OI data or fallback */}
+                            <div className="flex-1 p-2 text-right text-[#b2b5be]">{ceLiveData?.oi ? Number(ceLiveData.oi).toLocaleString('en-IN') : (ce.oi || "—")}</div>
+                            <div className="flex-1 p-2 text-right text-[#b2b5be]">—</div>
+                            <div className={`flex-1 p-2 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[#b2b5be]'}`}>
+                              {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
+                              {ceChangePercent !== 0 && (
+                                <span className="text-[10px] ml-1 opacity-80">
+                                  ({ceChangePercent > 0 ? '+' : ''}{ceChangePercent.toFixed(2)}%)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {hoveredSide?.index === i && hoveredSide?.side === 'CE' && <ActionTooltip optRaw={ce} optLive={ceLiveData} />}
+                        </td>
 
-                      {/* PUT side */}
-                      <td className="p-2 font-bold text-[#f23645] border-l border-[var(--border-primary)]">
-                        {peLtp !== "—" ? `₹${peLtp}` : "—"}
-                      </td>
-                      <PutCell value={fmt2(pe.impliedVolatility)} />
-                      <PutCell value={fmt4(pe.delta)} />
-                      <PutCell value={fmt4(pe.theta)} />
-                      <PutCell value={fmt4(pe.gamma)} />
-                      <PutCell value={fmt4(pe.vega)} />
-                    </tr>
+                        {/* ──────────────── Strike ──────────────── */}
+                        <td className={`p-2 bg-[#1e222d] group-hover:bg-[#262b36] font-bold text-[12px] border-x border-[#2a2e39] whitespace-nowrap text-center ${isAtm ? 'text-[#d1d4dc]' : 'text-[#d1d4dc]'}`}>
+                          {Number(row.strikePrice).toLocaleString("en-IN")}
+                        </td>
+
+                        {/* ──────────────── PUT Side ──────────────── */}
+                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'PE' })}>
+                          <div className="flex w-full h-full items-center">
+                            <div className={`flex-1 p-2 text-left font-medium pl-4 ${peChangePercent > 0 ? 'text-[#089981]' : peChangePercent < 0 ? 'text-[#f23645]' : 'text-[#b2b5be]'}`}>
+                              {peLtp !== "—" ? `₹${peLtp}` : "—"}
+                              {peChangePercent !== 0 && (
+                                <span className="text-[10px] ml-1 opacity-80">
+                                  ({peChangePercent > 0 ? '+' : ''}{peChangePercent.toFixed(2)}%)
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 p-2 text-left text-[#b2b5be]">—</div>
+                            <div className="flex-1 p-2 text-left text-[#b2b5be]">{peLiveData?.oi ? Number(peLiveData.oi).toLocaleString('en-IN') : (pe.oi || "—")}</div>
+                            <div className="flex-1 p-2 text-right text-[#b2b5be] pr-4">{formatVol(peVolume)}</div>
+                          </div>
+                          {hoveredSide?.index === i && hoveredSide?.side === 'PE' && <ActionTooltip optRaw={pe} optLive={peLiveData} />}
+                        </td>
+                      </tr>
+                    </React.Fragment>
                   );
                 })}
               </tbody>

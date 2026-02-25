@@ -56,3 +56,4 @@ const setupCronJobs = () => {
 };
 
 export default setupCronJobs;
+export { fetchInstruments };

@@ -40,6 +40,9 @@ const InstrumentSchema = mongoose.Schema({
     timestamps: true,
 });
 
+InstrumentSchema.index({ name: 1, expiry: 1, instrumenttype: 1 });
+InstrumentSchema.index({ symbol: 1 });
+
 const Instrument = mongoose.model('Instrument', InstrumentSchema);
 
 export default Instrument;

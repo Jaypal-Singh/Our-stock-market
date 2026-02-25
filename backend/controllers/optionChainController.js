@@ -407,3 +407,162 @@ export const getExpiries = async (req, res) => {
     }
 };
 
+/**
+ * Get accurate, valid Expiries for a specific symbol from the DB
+ * GET /api/option-chain/custom/expiries/:name
+ */
+export const getCustomExpiries = async (req, res) => {
+    try {
+        const { name } = req.params;
+        if (!name) {
+            return res.status(400).json({ success: false, message: 'Stock/Index name is required' });
+        }
+
+        const { default: Instrument } = await import('../models/Instrument.js');
+        
+        // Find distinct expiries for this name where it's an option
+        const expiries = await Instrument.distinct('expiry', {
+            name: name,
+            instrumenttype: { $in: ['OPTIDX', 'OPTSTK'] }
+        });
+
+        if (!expiries || expiries.length === 0) {
+            return res.status(404).json({ success: false, message: `No expiries found for ${name}` });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Filter out expired dates
+        const validExpiries = expiries.filter(expiryStr => {
+            if (!expiryStr || expiryStr.length < 9) return true;
+            const expiryDate = new Date(`${expiryStr.slice(0, 2)} ${expiryStr.slice(2, 5)} ${expiryStr.slice(5)}`);
+            return expiryDate >= today;
+        });
+
+        // Sort expiries: format is DDMMMYYYY (e.g., 25JAN2024), convert to Date for correct ordering
+        const sortedExpiries = validExpiries.sort((a, b) => {
+            const dateA = new Date(`${a.slice(0, 2)} ${a.slice(2, 5)} ${a.slice(5)}`);
+            const dateB = new Date(`${b.slice(0, 2)} ${b.slice(2, 5)} ${b.slice(5)}`);
+            return dateA - dateB;
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: sortedExpiries
+        });
+    } catch (error) {
+        logger.error(`Error fetching custom expiries for ${req.params?.name}:`, error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch Custom Expiries' });
+    }
+};
+
+/**
+ * Get Custom Option Chain from the cached local Instruments Database
+ * POST /api/option-chain/custom/chain
+ * Body: { name: "RELIANCE", expirydate: "25JAN2024" }
+ */
+export const getCustomOptionChain = async (req, res) => {
+    try {
+        const { name, expirydate } = req.body || {};
+
+        if (!name || !expirydate) {
+            return res.status(400).json({
+                success: false,
+                message: 'name and expirydate are required'
+            });
+        }
+
+        const { default: Instrument } = await import('../models/Instrument.js');
+
+        // Allow both OPTIDX and OPTSTK
+        const optionsDocs = await Instrument.find({
+            name: name,
+            expiry: expirydate,
+            instrumenttype: { $in: ['OPTIDX', 'OPTSTK'] }
+        });
+
+        if (!optionsDocs || optionsDocs.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No option chain available for ${name} expiring on ${expirydate}`
+            });
+        }
+
+        // Look up underlying token for Live Spot Price tracking in the frontend
+        let underlyingToken = null;
+        let underlyingExchSeg = null;
+        try {
+            const underlyingDocs = await Instrument.find({
+                name: name,
+                instrumenttype: { $in: ['', 'AMXIDX', 'EQ'] },
+                exch_seg: { $in: ['NSE', 'BSE'] }
+            }).limit(1);
+            if (underlyingDocs && underlyingDocs.length > 0) {
+                underlyingToken = underlyingDocs[0].token;
+                underlyingExchSeg = underlyingDocs[0].exch_seg;
+            }
+        } catch (e) {
+            logger.warn(`Failed to find underlying token for ${name}: ${e.message}`);
+        }
+
+        const strikeMap = {};
+
+        optionsDocs.forEach(item => {
+            // "strike" in ScripMaster is often formatted "2300000.000000" (implied * 100)
+            const strikePrice = parseFloat(item.strike) / 100;
+
+            if (!strikeMap[strikePrice]) {
+                strikeMap[strikePrice] = { strikePrice, CE: null, PE: null };
+            }
+
+            const isCE = item.symbol.endsWith('CE');
+            const isPE = item.symbol.endsWith('PE');
+            
+            const optionData = {
+                delta: null, // Greeks are null because we don't fetch them for custom chain
+                gamma: null,
+                theta: null,
+                vega: null,
+                impliedVolatility: null,
+                tradeVolume: null,
+                token: item.token,
+                symbol: item.symbol,
+                lotsize: parseInt(item.lotsize) || null,
+                exch_seg: item.exch_seg
+            };
+
+            if (isCE) {
+                strikeMap[strikePrice].CE = optionData;
+            } else if (isPE) {
+                strikeMap[strikePrice].PE = optionData;
+            }
+        });
+
+        // Filter out strikes that don't have at least one valid token and sort array
+        const optionChain = Object.values(strikeMap)
+            .filter(strike => strike.CE?.token || strike.PE?.token)
+            .sort((a, b) => a.strikePrice - b.strikePrice);
+
+        logger.success(`Custom Option Chain generated: ${optionChain.length} strikes for ${name}`);
+
+        return res.status(200).json({
+            success: true,
+            data: optionChain,
+            name,
+            expiry: expirydate,
+            count: optionChain.length,
+            isCustom: true, // Flag to tell frontend this is custom data
+            underlyingToken,
+            underlyingExchSeg
+        });
+
+    } catch (error) {
+        logger.error('💀 Custom Option Chain Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error: ' + error.message
+        });
+    }
+};
+

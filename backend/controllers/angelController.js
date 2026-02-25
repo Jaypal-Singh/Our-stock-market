@@ -346,12 +346,34 @@ export const searchInstruments = async (req, res) => {
                 { symbol: regex }
             ]
         })
-            .select('name symbol token exch_seg instrumenttype')
-            .limit(20);
+            .select('name symbol token exch_seg instrumenttype expiry')
+            .limit(100);
+
+        // Sort locally to ensure EQ and FUT come before OPT, and try to bring variety
+        const sortedInstruments = instruments.sort((a, b) => {
+            const getRank = (type) => {
+                if (type === 'EQ') return 1;
+                if (type === 'FUTSTK' || type === 'FUTIDX') return 2;
+                if (type === 'OPTSTK' || type === 'OPTIDX') return 3;
+                return 4;
+            };
+            
+            const rankA = getRank(a.instrumenttype);
+            const rankB = getRank(b.instrumenttype);
+            
+            if (rankA !== rankB) return rankA - rankB;
+            
+            // If both are options, sort them by Expiry and then Strike string length as rough proxy
+            if (a.expiry && b.expiry) {
+                // E.g. 24FEB2026 -> Date parsing. To keep it fast, just locale compare.
+                return a.symbol.localeCompare(b.symbol);
+            }
+            return 0;
+        });
 
         res.json({
             success: true,
-            data: instruments
+            data: sortedInstruments
         });
 
     } catch (error) {
