@@ -4,6 +4,8 @@ import AngelOneCredential from '../models/AngelOneCredential.js';
 import { createLogger } from '../utils/logger.js';
 import { isMarketOpen } from '../utils/marketHours.js';
 
+import User from '../models/User.js';
+
 const logger = createLogger('OrderController');
 
 /**
@@ -54,6 +56,30 @@ export const placeOrder = async (req, res) => {
             return res.status(401).json({
                 success: false,
                 message: "User not authenticated"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (user.tradingBalance <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Trading balance is zero or negative. Cannot place orders."
+            });
+        }
+
+        const estimatedCost = (marketPrice || price || 0) * quantity;
+
+        if (transactiontype === 'BUY' && estimatedCost > user.tradingBalance) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient trading balance. Order cost: ${estimatedCost}, Available balance: ${user.tradingBalance}`
             });
         }
 
@@ -158,6 +184,14 @@ export const placeOrder = async (req, res) => {
                     newOrder.filledShares = quantity;
                     newOrder.unfilledShares = 0;
                     newOrder.message = "Order Executed";
+
+                    // Update user's trading balance
+                    if (transactiontype === 'BUY') {
+                        user.tradingBalance -= (executionPrice * quantity);
+                    } else if (transactiontype === 'SELL') {
+                        user.tradingBalance += (executionPrice * quantity);
+                    }
+                    await user.save();
                 }
 
                 await newOrder.save();
