@@ -1,40 +1,107 @@
-import React from 'react';
-import { Wallet } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wallet, Briefcase, Plus, Minus } from 'lucide-react';
+import axios from 'axios';
+import AddFundsModal from '../../../../Components/Common/AddFundsModal';
+import WithdrawFundsModal from '../../../../Components/Common/WithdrawFundsModal';
 
 const FundsBanner = () => {
-    return (
-        <div
-            className="bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-main)] rounded-2xl border border-[var(--border-primary)] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 relative overflow-hidden group mb-8 text-center md:text-left shadow-[var(--shadow-premium)]"
-        >
-            {/* Decorative subtle texture/glow */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-primary)]/5 blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/5 blur-[100px] -ml-32 -mb-32 pointer-events-none"></div>
+    const [balance, setBalance] = useState(0);
+    const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+    const [isWithdrawFundsOpen, setIsWithdrawFundsOpen] = useState(false);
 
-            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-7 z-10 w-full relative">
-                {/* Illustration Wrapper */}
-                <div className="flex-shrink-0 relative">
-                    <div className="w-16 h-16 bg-gradient-to-tr from-[var(--bg-card)] to-[var(--bg-secondary)] rounded-2xl flex items-center justify-center shadow-sm border border-[var(--border-primary)] transform group-hover:scale-110 transition-transform duration-500">
-                        <Wallet size={30} className="text-[var(--accent-primary)]" strokeWidth={1.5} />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-[var(--bg-secondary)] shadow-lg animate-pulse">
-                        <span className="mb-0.5">+</span>
-                    </div>
+    useEffect(() => {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        if (userInfo && userInfo.tradingBalance !== undefined) {
+            setBalance(userInfo.tradingBalance);
+        }
+    }, []);
+
+    const updateBalanceAPI = async (action, amount) => {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${userInfo.token}`,
+                },
+            };
+
+            const { data } = await axios.put(
+                'http://localhost:5000/api/auth/profile/balance',
+                { action, amount },
+                config
+            );
+
+            // Update local storage and trigger event for navbar
+            localStorage.setItem('userInfo', JSON.stringify(data));
+            window.dispatchEvent(new Event('userInfoUpdated'));
+            setBalance(data.tradingBalance);
+            return true;
+        } catch (error) {
+            console.error('Error updating balance:', error.response?.data?.message || error.message);
+            // In a real app, you'd show a toast notification here
+            return false;
+        }
+    };
+
+    const handleAddFunds = async (amount) => {
+        if (amount > 0) {
+            await updateBalanceAPI('add', amount);
+        }
+    };
+
+    const handleWithdrawFunds = async (amount) => {
+        if (amount > 0 && amount <= balance) {
+            await updateBalanceAPI('withdraw', amount);
+        }
+    };
+
+    return (
+        <>
+            <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4 w-full mb-8">
+
+                {/* Left Section: Balance Info */}
+                <div className="flex flex-col text-center md:text-left w-full md:w-auto">
+                    <span className="text-xs text-[var(--text-muted)] mb-0.5">
+                        Trading Balance
+                    </span>
+                    <span className="text-[22px] font-bold text-white">
+                        ₹ {balance.toFixed(2)}
+                    </span>
                 </div>
 
-                <div className="flex-1">
-                    <div className="text-[var(--accent-primary)] text-[10px] font-extrabold uppercase mb-2 tracking-[0.2em] opacity-80">Get ready to Invest</div>
-                    <h2 className="text-[var(--text-primary)] text-lg md:text-xl font-extrabold leading-tight tracking-tight max-w-md">
-                        Add funds to start your trading journey with Angel One
-                    </h2>
+                {/* Right Section: Action Buttons */}
+                <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
+                    <button
+                        onClick={() => setIsWithdrawFundsOpen(true)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#4d5162] text-[#6b82fe] bg-transparent text-xs font-semibold hover:border-[#6b82fe] transition-colors whitespace-nowrap"
+                    >
+                        <Wallet size={14} className="stroke-2 opacity-80" />
+                        WITHDRAW FUNDS
+                    </button>
+                    <button
+                        onClick={() => setIsAddFundsOpen(true)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#6b82fe] text-white text-xs font-semibold hover:bg-[#5b72ee] transition-colors whitespace-nowrap"
+                    >
+                        <Wallet size={14} className="stroke-2 opacity-90" />
+                        ADD FUNDS
+                    </button>
                 </div>
             </div>
 
-            <button
-                className="w-full md:w-auto bg-gradient-to-r from-[var(--accent-primary)] to-indigo-600 hover:from-indigo-600 hover:to-[var(--accent-primary)] text-white text-xs font-extrabold py-4 px-8 rounded-xl uppercase tracking-widest transition-all duration-300 z-10 shadow-[var(--shadow-accent)] whitespace-nowrap min-w-fit active:scale-95"
-            >
-                Add Funds
-            </button>
-        </div>
+            <AddFundsModal
+                isOpen={isAddFundsOpen}
+                onClose={() => setIsAddFundsOpen(false)}
+                onAdd={handleAddFunds}
+            />
+
+            <WithdrawFundsModal
+                isOpen={isWithdrawFundsOpen}
+                onClose={() => setIsWithdrawFundsOpen(false)}
+                onWithdraw={handleWithdrawFunds}
+                currentBalance={balance}
+            />
+        </>
     );
 };
 

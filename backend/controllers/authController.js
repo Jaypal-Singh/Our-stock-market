@@ -16,6 +16,7 @@ const authUser = asyncHandler(async (req, res) => {
             name: user.name,
             email: user.email,
             profilePic: user.profilePic,
+            tradingBalance: user.tradingBalance,
             token: generateToken(user._id),
         });
     } else {
@@ -49,6 +50,7 @@ const registerUser = asyncHandler(async (req, res) => {
             name: user.name,
             email: user.email,
             profilePic: user.profilePic,
+            tradingBalance: user.tradingBalance,
             token: generateToken(user._id),
         });
     } else {
@@ -80,6 +82,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             profilePic: updatedUser.profilePic,
+            tradingBalance: updatedUser.tradingBalance,
             token: generateToken(updatedUser._id),
         });
     } else {
@@ -88,4 +91,46 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     }
 });
 
-export { authUser, registerUser, updateUserProfile };
+// @desc    Update user trading balance
+// @route   PUT /api/auth/profile/balance
+// @access  Private
+const updateUserBalance = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    const { action, amount } = req.body;
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    if (typeof amount !== 'number' || amount <= 0) {
+        res.status(400);
+        throw new Error('Invalid amount');
+    }
+
+    if (action === 'add') {
+        user.tradingBalance += amount;
+    } else if (action === 'withdraw') {
+        if (amount > user.tradingBalance) {
+            res.status(400);
+            throw new Error('Insufficient funds');
+        }
+        user.tradingBalance -= amount;
+    } else {
+        res.status(400);
+        throw new Error('Invalid action');
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        profilePic: updatedUser.profilePic,
+        tradingBalance: updatedUser.tradingBalance,
+        token: generateToken(updatedUser._id),
+    });
+});
+
+export { authUser, registerUser, updateUserProfile, updateUserBalance };
