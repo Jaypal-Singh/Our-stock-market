@@ -27,7 +27,8 @@ export function isValidStockObject(stock) {
     if (!isValidToken(stock.token)) return false;
 
     // Must have exchange segment
-    if (!stock.exch_seg || !isExchangeSupported(stock.exch_seg)) {
+    const exch = stock.exch_seg || stock.exchange;
+    if (!exch || !isExchangeSupported(exch)) {
         return false;
     }
 
@@ -89,7 +90,7 @@ export function normalizeStockTokens(stocks) {
             if (typeof stock === 'object') {
                 return {
                     token: String(stock.token).trim(),
-                    exch_seg: stock.exch_seg || 'NSE',
+                    exch_seg: stock.exch_seg || stock.exchange || 'NSE',
                     symbol: stock.symbol || stock.name || '',
                     instrumenttype: stock.instrumenttype || ''
                 };
