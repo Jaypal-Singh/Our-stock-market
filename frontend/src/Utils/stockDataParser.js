@@ -18,8 +18,8 @@ export function parseTickData(tickData) {
             if (tickData.content && typeof tickData.content === 'object') {
                 const data = tickData.content;
 
-                // Remove quotes from token if present
-                const token = data.token ? data.token.replace(/"/g, '') : null;
+                // Remove quotes from token if present and convert to string
+                const token = data.token ? String(data.token).replace(/"/g, '') : null;
 
                 if (!token) {
                     console.warn('No token in tick data');
@@ -44,7 +44,7 @@ export function parseTickData(tickData) {
 
             // Direct object format (without content wrapper)
             if (tickData.token || tickData.last_traded_price) {
-                const token = tickData.token ? tickData.token.replace(/"/g, '') : null;
+                const token = tickData.token ? String(tickData.token).replace(/"/g, '') : null;
 
                 if (!token) {
                     console.warn('No token in direct tick data');
@@ -189,20 +189,21 @@ export function updateStocksWithTicks(prevStocks, ticks) {
     const tickMap = new Map();
     ticks.forEach(tick => {
         if (tick && tick.token) {
-            tickMap.set(tick.token, tick);
+            tickMap.set(String(tick.token), tick);
         }
     });
 
     if (tickMap.size === 0) return prevStocks;
 
     return prevStocks.map(stock => {
-        const parsedTick = tickMap.get(stock.token);
+        const tokenKey = String(stock.token || stock.symboltoken);
+        const parsedTick = tickMap.get(tokenKey);
 
         if (parsedTick) {
             const currentPrice = parsedTick.ltp;
 
-            // For first update, use current LTP as close price (baseline)
-            const baselineClose = stock.close || currentPrice;
+            // For first update, use the tick's latest close price if available, otherwise fallback to current LTP
+            const baselineClose = stock.close || parsedTick.close || currentPrice;
 
             // Calculate change from baseline close price
             const change = currentPrice - baselineClose;
@@ -217,7 +218,7 @@ export function updateStocksWithTicks(prevStocks, ticks) {
                 open: parsedTick.open || stock.open || currentPrice,
                 high: parsedTick.high || stock.high || currentPrice,
                 low: parsedTick.low || stock.low || currentPrice,
-                close: stock.close || currentPrice, // Set baseline on first update
+                close: stock.close || parsedTick.close || currentPrice, // Set baseline on first update
                 volume: parsedTick.volume || 0,
                 change,
                 changePercent: parseFloat(changePercent.toFixed(2)),

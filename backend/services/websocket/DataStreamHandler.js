@@ -26,13 +26,13 @@ class DataStreamHandler {
             this.tickCount++;
             this.lastTickTime = Date.now();
 
-            // Log tick info (only every 10 ticks to avoid spam)
-            if (this.tickCount % 10 === 0) {
-                logger.debug(`Processed ${this.tickCount} ticks`, {
+            // Log tick info (every tick for debugging)
+            if (this.tickCount % 5 === 0) {
+                logger.info(`Processed ${this.tickCount} ticks`, {
                     type: typeof tickData,
+                    isArray: Array.isArray(tickData),
                     hasContent: !!tickData?.content,
-                    isBuffer: tickData instanceof Buffer,
-                    isArray: Array.isArray(tickData)
+                    sample: JSON.stringify(tickData).substring(0, 200)
                 });
             }
 

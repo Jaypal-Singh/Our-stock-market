@@ -10,7 +10,7 @@ import axios from 'axios';
 
 const MobileWatchlistPage = () => {
     const navigate = useNavigate();
-    const { isConnected, error, addStock: socketAddStock } = useAngelOneSocket() || {}; // Use hook for socket/connection status
+    const { stocks, isConnected, error, addStock: socketAddStock } = useAngelOneSocket() || {}; // Use hook for socket/connection status
 
     const [watchlists, setWatchlists] = useState([]);
     const [activeWatchlist, setActiveWatchlistState] = useState(null);
@@ -87,7 +87,7 @@ const MobileWatchlistPage = () => {
 
                 // Merge live data into instruments
                 const merged = instruments.map(inst => {
-                    const live = liveData.find(l => l.token === inst.token);
+                    const live = liveData.find(l => String(l.token) === String(inst.token));
                     if (live) {
                         return {
                             ...inst,
@@ -105,6 +105,13 @@ const MobileWatchlistPage = () => {
                     return inst;
                 });
                 setActiveStocks(merged);
+
+                // Register these stocks with the socket hook
+                if (socketAddStock) {
+                    merged.forEach(inst => {
+                        socketAddStock(inst);
+                    });
+                }
             } catch (quoteErr) {
                 console.error("Error fetching live quotes, showing static data", quoteErr);
                 setActiveStocks(instruments);
@@ -115,6 +122,25 @@ const MobileWatchlistPage = () => {
             setIsLoading(false);
         }
     };
+
+    // Sync activeStocks with real-time 'stocks' from hook
+    useEffect(() => {
+        if (!activeStocks || activeStocks.length === 0 || !stocks) return;
+
+        setActiveStocks(prevActiveStocks => {
+            let hasUpdates = false;
+            const nextStocks = prevActiveStocks.map(ast => {
+                const live = stocks.find(s => String(s.token || s.symboltoken) === String(ast.token || ast.symboltoken));
+                if (live && (live.ltp !== ast.ltp || live.change !== ast.change || live.lastUpdated !== ast.lastUpdated)) {
+                    hasUpdates = true;
+                    return { ...ast, ...live };
+                }
+                return ast;
+            });
+
+            return hasUpdates ? nextStocks : prevActiveStocks;
+        });
+    }, [stocks]);
 
     const handleCreateWatchlist = async (name) => {
         try {

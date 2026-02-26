@@ -23,6 +23,8 @@ import { createLogger } from './utils/logger.js';
 
 dotenv.config();
 
+import startPendingOrdersCron from './cron/pendingOrdersCron.js';
+
 // Initialize App
 const initApp = async () => {
     try {
@@ -31,6 +33,7 @@ const initApp = async () => {
         // Initialize Cron Jobs after DB connection
         startAngelLoginCron();
         fetchInstruments();
+        startPendingOrdersCron();
 
         logger.success('Database connected and cron jobs started');
     } catch (err) {

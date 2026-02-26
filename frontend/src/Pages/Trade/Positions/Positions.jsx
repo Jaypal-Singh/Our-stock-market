@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PositionsTable from './components/PositionsTable';
 import useAngelOneSocket from '../../../Hooks/useAngelOneSocket';
+import BuyWindow from '../../../Components/Buy&SellWindow/BuyWindow/BuyWindow';
+import SellWindow from '../../../Components/Buy&SellWindow/SellWindow/SellWindow';
 
 function Positions() {
     const [positions, setPositions] = useState([]);
@@ -9,38 +11,73 @@ function Positions() {
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-    useEffect(() => {
-        const fetchPositions = async () => {
-            setLoading(true);
-            try {
-                const userInfo = localStorage.getItem("userInfo");
-                const user = userInfo ? JSON.parse(userInfo) : null;
-                const userId = user ? user._id : null;
+    const fetchPositions = useCallback(async () => {
+        setLoading(true);
+        try {
+            const userInfo = localStorage.getItem("userInfo");
+            const user = userInfo ? JSON.parse(userInfo) : null;
+            const userId = user ? user._id : null;
 
-                if (!userId) {
-                    setError("User not logged in");
-                    setLoading(false);
-                    return;
-                }
-
-                const response = await fetch(`${API_URL}/api/position/?userId=${userId}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    setPositions(data.data);
-                } else {
-                    setError(data.message || "Failed to fetch positions");
-                }
-            } catch (err) {
-                console.error("Positions Fetch Error:", err);
-                setError("Network error");
-            } finally {
+            if (!userId) {
+                setError("User not logged in");
                 setLoading(false);
+                return;
             }
-        };
 
+            const response = await fetch(`${API_URL}/api/position/?userId=${userId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Filter to only show F&O positions that are currently OPEN (netQty != 0)
+                const fnoPositions = data.data.filter(pos =>
+                    (pos.netQty !== 0) && (
+                        pos.exchange === 'NFO' ||
+                        pos.exchange === 'BFO' ||
+                        pos.exchange === 'MCX' ||
+                        pos.exchange === 'CDS' ||
+                        pos.tradingsymbol?.includes('CE') ||
+                        pos.tradingsymbol?.includes('PE')
+                    )
+                );
+                setPositions(fnoPositions);
+            } else {
+                setError(data.message || "Failed to fetch positions");
+            }
+        } catch (err) {
+            console.error("Positions Fetch Error:", err);
+            setError("Network error");
+        } finally {
+            setLoading(false);
+        }
+    }, [API_URL]);
+
+    useEffect(() => {
         fetchPositions();
-    }, []);
+    }, [fetchPositions]);
+
+    const [actionState, setActionState] = useState({ type: null, stock: null });
+
+    const handleAction = (type, posRaw) => {
+        setActionState({
+            type,
+            stock: {
+                token: posRaw.symboltoken,
+                name: posRaw.tradingsymbol,
+                symbol: posRaw.tradingsymbol,
+                exch_seg: posRaw.exchange || 'NSE',
+                price: posRaw.ltp || posRaw.avgPrice || 0,
+                change: 0,
+                percent: 0,
+                isUp: true
+            }
+        });
+    };
+
+    const handleWindowClose = () => {
+        setActionState({ type: null, stock: null });
+        // Refetch to hide position if it hit 0 qty
+        setTimeout(() => fetchPositions(), 1500);
+    };
 
     // Memoize stocks for socket subscription
     const dynamicStocks = useMemo(() => {
@@ -121,9 +158,35 @@ function Positions() {
                 ) : error ? (
                     <div className="text-center text-red-500 py-8">{error}</div>
                 ) : (
-                    <PositionsTable positions={livePositions} />
+                    <PositionsTable positions={livePositions} onAction={handleAction} />
                 )}
             </div>
+
+            {/* Overlays */}
+            {actionState.type === 'buy' && actionState.stock && (
+                <BuyWindow
+                    uid={actionState.stock.token}
+                    stockName={actionState.stock.name}
+                    stockSymbol={actionState.stock.symbol}
+                    stockPrice={actionState.stock.price}
+                    stockChange={actionState.stock.change}
+                    stockChangePercent={actionState.stock.percent}
+                    onClose={handleWindowClose}
+                    onSwitchToSell={() => setActionState({ ...actionState, type: 'sell' })}
+                />
+            )}
+            {actionState.type === 'sell' && actionState.stock && (
+                <SellWindow
+                    uid={actionState.stock.token}
+                    stockName={actionState.stock.name}
+                    stockSymbol={actionState.stock.symbol}
+                    stockPrice={actionState.stock.price}
+                    stockChange={actionState.stock.change}
+                    stockChangePercent={actionState.stock.percent}
+                    onClose={handleWindowClose}
+                    onSwitchToBuy={() => setActionState({ ...actionState, type: 'buy' })}
+                />
+            )}
         </div>
     )
 }
