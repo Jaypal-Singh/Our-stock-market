@@ -29,13 +29,13 @@ function Portfolio() {
 
     // Calculate real-time summary
     const liveSummary = React.useMemo(() => {
-        if (!backendSummary || !liveHoldings) return backendSummary;
+        if (!backendSummary) return null;
 
         let totalCurrentValue = 0;
         let totalUnrealizedPnl = 0;
 
-        const enrichedHoldings = holdings.map(h => {
-            const live = liveHoldings.find(l => l.token === h.symboltoken);
+        const enrichedHoldings = (holdings || []).map(h => {
+            const live = (liveHoldings || []).find(l => l.token === h.symboltoken);
             const ltp = live?.ltp || h.avgBuyPrice; // Fallback to avgBuyPrice if no tick yet
             const currentValue = h.netQty * ltp;
             const unrealizedPnl = currentValue - h.investedValue;
@@ -48,7 +48,7 @@ function Portfolio() {
                 ltp,
                 currentValue,
                 unrealizedPnl,
-                totalPnl: (h.realizedPnl || 0) + unrealizedPnl,
+                totalPnl: unrealizedPnl, // Purely unrealized in active portfolio
                 changePercent: live?.changePercent || 0
             };
         });
@@ -58,7 +58,7 @@ function Portfolio() {
             totalInvested: backendSummary.totalInvested,
             totalRealizedPnl: backendSummary.totalRealizedPnl,
             totalUnrealizedPnl,
-            totalPnl: (backendSummary.totalRealizedPnl || 0) + totalUnrealizedPnl,
+            totalPnl: totalUnrealizedPnl, // User only wants active holdings P&L here
             currentValue: totalCurrentValue,
             holdingsCount: enrichedHoldings.length,
             uniqueSymbols: new Set(enrichedHoldings.map(h => h.tradingsymbol)).size,

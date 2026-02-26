@@ -10,10 +10,48 @@ const FundsBanner = () => {
     const [isWithdrawFundsOpen, setIsWithdrawFundsOpen] = useState(false);
 
     useEffect(() => {
-        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-        if (userInfo && userInfo.tradingBalance !== undefined) {
-            setBalance(userInfo.tradingBalance);
-        }
+        const updateBalanceFromStorage = () => {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (userInfo && userInfo.tradingBalance !== undefined) {
+                setBalance(userInfo.tradingBalance);
+            }
+        };
+
+        const fetchBalanceFromServer = async () => {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (!userInfo || !userInfo.token) return;
+
+                const config = {
+                    headers: {
+                        Authorization: `Bearer ${userInfo.token}`,
+                    },
+                };
+
+                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+
+                // Update local storage
+                const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
+                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+
+                setBalance(data.tradingBalance);
+
+            } catch (error) {
+                console.error('Error fetching balance from server:', error);
+                // Fallback to storage if API fails
+                updateBalanceFromStorage();
+            }
+        };
+
+        // Initial load
+        fetchBalanceFromServer();
+
+        // Listen for updates from other components
+        window.addEventListener('userInfoUpdated', updateBalanceFromStorage);
+
+        return () => {
+            window.removeEventListener('userInfoUpdated', updateBalanceFromStorage);
+        };
     }, []);
 
     const updateBalanceAPI = async (action, amount) => {

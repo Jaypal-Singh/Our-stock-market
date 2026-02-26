@@ -137,6 +137,12 @@ export const placeOrder = async (req, res) => {
         if (!marketOpen) {
             newOrder.orderstatus = "pending";
             newOrder.message = "Market Closed - Order Pending";
+
+            if (transactiontype === 'BUY') {
+                user.tradingBalance -= estimatedCost;
+                await user.save();
+            }
+
             await newOrder.save();
 
             return res.status(200).json({
@@ -144,7 +150,8 @@ export const placeOrder = async (req, res) => {
                 message: "Market is closed. Your order has been placed as PENDING.",
                 data: {
                     orderId: newOrder._id,
-                    status: "pending"
+                    status: "pending",
+                    tradingBalance: user.tradingBalance
                 }
             });
         }
@@ -182,6 +189,11 @@ export const placeOrder = async (req, res) => {
                     newOrder.orderstatus = "pending";
                     newOrder.averagePrice = price;
                     newOrder.message = "Order Placed (Pending)";
+
+                    if (transactiontype === 'BUY') {
+                        user.tradingBalance -= estimatedCost;
+                        await user.save();
+                    }
                 } else {
                     const executionPrice = marketPrice || price || 0;
                     newOrder.orderstatus = "complete";
@@ -197,6 +209,62 @@ export const placeOrder = async (req, res) => {
                         user.tradingBalance += (executionPrice * quantity);
                     }
                     await user.save();
+                    // --- NEW: AUTO-PLACE Child STOPLOSS / SQUAREOFF order ---
+                    // According to REAL stock market logic, if you provide a stoploss target 
+                    // AND the order executes, new "pending" child orders sit on the order book.
+                    const childrenOrders = [];
+
+                    if (stoploss && stoploss > 0) {
+                        childrenOrders.push(new Order({
+                            userId,
+                            variety: 'STOPLOSS',
+                            tradingsymbol,
+                            symboltoken,
+                            // If they bought, the stoploss order must be SELL
+                            transactiontype: transactiontype === 'BUY' ? 'SELL' : 'BUY',
+                            exchange,
+                            ordertype: 'STOPLOSS_MARKET',
+                            producttype,
+                            price: 0,
+                            triggerprice: stoploss, // Trigger target price
+                            quantity,
+                            angelOrderId: "CHILD-SL-" + Date.now(),
+                            uniqueorderid: "C-UID-" + Date.now(),
+                            message: `Auto-placed Stop Loss child order`,
+                            orderstatus: "pending",
+                            tag: 'AUTO_STOPLOSS'
+                        }));
+                    }
+
+                    if (squareoff && squareoff > 0) {
+                        childrenOrders.push(new Order({
+                            userId,
+                            variety: 'NORMAL',
+                            tradingsymbol,
+                            symboltoken,
+                            // If they bought, squareoff target order must be SELL (which is a LIMIT above current price)
+                            transactiontype: transactiontype === 'BUY' ? 'SELL' : 'BUY',
+                            exchange,
+                            ordertype: 'LIMIT',
+                            producttype,
+                            price: squareoff,
+                            quantity,
+                            angelOrderId: "CHILD-SQ-" + Date.now(),
+                            uniqueorderid: "C-UID-" + Date.now() + 1,
+                            message: `Auto-placed Target SquareOff child order`,
+                            orderstatus: "pending",
+                            tag: 'AUTO_SQUAREOFF'
+                        }));
+                    }
+
+                    if (childrenOrders.length > 0) {
+                        try {
+                            await Order.insertMany(childrenOrders);
+                            logger.info(`Placed ${childrenOrders.length} child trigger orders for base order ${newOrder._id}`);
+                        } catch (childErr) {
+                            logger.error('Failed to log child orders:', childErr.message);
+                        }
+                    }
                 }
 
                 await newOrder.save();
@@ -208,7 +276,8 @@ export const placeOrder = async (req, res) => {
                         orderId: newOrder._id,
                         angelOrderId: response.data.orderid,
                         script: response.data.script,
-                        status: newOrder.orderstatus
+                        status: newOrder.orderstatus,
+                        tradingBalance: user.tradingBalance
                     }
                 });
             } else {
@@ -297,6 +366,16 @@ export const cancelOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: "Cannot cancel a completed or rejected order" });
         }
 
+        let refundUser = null;
+        if (order.orderstatus === 'pending' && order.transactiontype === 'BUY') {
+            refundUser = await User.findById(userId);
+            if (refundUser) {
+                const refund = (order.price || order.marketPriceAtOrder || 0) * order.quantity;
+                refundUser.tradingBalance += refund;
+                await refundUser.save();
+            }
+        }
+
         order.orderstatus = 'cancelled';
         order.message = 'Order Cancelled by User';
         await order.save();
@@ -304,7 +383,11 @@ export const cancelOrder = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Order Cancelled Successfully",
-            data: { orderId: order._id, status: order.orderstatus }
+            data: {
+                orderId: order._id,
+                status: order.orderstatus,
+                tradingBalance: refundUser ? refundUser.tradingBalance : undefined
+            }
         });
 
     } catch (error) {

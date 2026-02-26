@@ -63,6 +63,12 @@ const OpenOrders = ({ orders = [], onUpdate }) => {
             });
             const data = await response.json();
             if (data.success) {
+                if (data.data && data.data.tradingBalance !== undefined) {
+                    const currentUserInfo = JSON.parse(localStorage.getItem("userInfo")) || {};
+                    currentUserInfo.tradingBalance = data.data.tradingBalance;
+                    localStorage.setItem("userInfo", JSON.stringify(currentUserInfo));
+                    window.dispatchEvent(new Event("userInfoUpdated"));
+                }
                 showToast("Order Cancelled Successfully", "success");
                 if (onUpdate) onUpdate();
             } else {

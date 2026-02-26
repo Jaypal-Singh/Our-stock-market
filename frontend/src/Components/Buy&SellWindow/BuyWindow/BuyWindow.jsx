@@ -3,6 +3,8 @@ import Draggable from "react-draggable";
 import { X, Minus, RotateCcw, Briefcase, Settings } from "lucide-react";
 import { placeOrder } from "../../../services/angelOneService";
 import { useToast } from "../../../context/ToastContext";
+import useAngelOneSocket from "../../../Hooks/useAngelOneSocket";
+import axios from "axios";
 
 /**
  * BuyWindow Component
@@ -17,18 +19,64 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
     const [price, setPrice] = useState(stockPrice); // Default to market price
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
     const [isLoading, setIsLoading] = useState(false);
+    const [userBalance, setUserBalance] = useState(0);
+
+    // Fetch user balance
+    useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (!userInfo || !userInfo.token) return;
+
+                const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+
+                const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
+                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+                window.dispatchEvent(new Event("userInfoUpdated"));
+                setUserBalance(data.tradingBalance);
+            } catch (error) {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (userInfo && userInfo.tradingBalance !== undefined) {
+                    setUserBalance(userInfo.tradingBalance);
+                }
+            }
+        };
+        fetchBalance();
+
+        const updateFromStorage = () => {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (userInfo && userInfo.tradingBalance !== undefined) {
+                setUserBalance(userInfo.tradingBalance);
+            }
+        };
+        window.addEventListener('userInfoUpdated', updateFromStorage);
+        return () => window.removeEventListener('userInfoUpdated', updateFromStorage);
+    }, []);
+
+    // Subscribe to live price for this specific stock
+    const dynamicStocks = React.useMemo(() => {
+        return [{ token: String(uid), name: stockName, exchange: "NSE" }];
+    }, [uid, stockName]);
+
+    const { stocks: liveStocks } = useAngelOneSocket(dynamicStocks);
+    const liveStock = liveStocks?.find(s => String(s.token || s.symboltoken) === String(uid));
+
+    const currentLivePrice = liveStock?.ltp || stockPrice;
+    const currentLiveChange = liveStock?.change ?? stockChange;
+    const currentLiveChangePercent = liveStock?.changePercent ?? stockChangePercent;
 
     // Update price when stock changes
     useEffect(() => {
-        setPrice(stockPrice);
+        setPrice(currentLivePrice);
     }, [stockName]);
 
     // Update price when live price changes (only in active Market mode)
     useEffect(() => {
         if (isMarket) {
-            setPrice(stockPrice);
+            setPrice(currentLivePrice);
         }
-    }, [stockPrice, isMarket]);
+    }, [currentLivePrice, isMarket]);
 
     // Calculations (mock)
     const marginRequired = (qty * price).toFixed(2);
@@ -59,7 +107,7 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
                 producttype: productType === "INT" ? "INTRADAY" : "DELIVERY",
                 duration: "DAY",
                 price: isMarket ? 0 : price,
-                marketPrice: stockPrice, // Current market price for avg price calculation
+                marketPrice: currentLivePrice, // Current live market price for accurate avg price execution
                 quantity: qty,
                 userId: userId
             };
@@ -69,7 +117,13 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
             const response = await placeOrder(orderData);
 
             if (response.success) {
-                showToast(`Buy Order Placed! ID: ${response.data.angelOrderId}`, "success");
+                if (response.data && response.data.tradingBalance !== undefined) {
+                    const currentUserInfo = JSON.parse(localStorage.getItem("userInfo")) || {};
+                    currentUserInfo.tradingBalance = response.data.tradingBalance;
+                    localStorage.setItem("userInfo", JSON.stringify(currentUserInfo));
+                    window.dispatchEvent(new Event("userInfoUpdated"));
+                }
+                showToast(`Buy Order Placed! ID: ${response.data.angelOrderId || response.data.orderId}`, "success");
                 onClose();
             } else {
                 showToast(`Order Failed: ${response.message || 'Unknown error'}`, "error");
@@ -98,12 +152,12 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
                             <span className="text-xs bg-[var(--bg-secondary)] text-[var(--text-muted)] px-1 rounded">NSE</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm mt-1">
-                            <span className="font-semibold text-[#00a278]">{stockPrice.toFixed(2)}</span>
-                            <span className="text-[#f23645] text-xs">{stockChange.toFixed(2)} ({stockChangePercent.toFixed(2)}%)</span>
+                            <span className="font-semibold text-[#00a278]">{currentLivePrice.toFixed(2)}</span>
+                            <span className="text-[#f23645] text-xs">{currentLiveChange.toFixed(2)} ({currentLiveChangePercent.toFixed(2)}%)</span>
                             <input type="radio" name={`exchange-${uid}`} id={`nse-${uid}`} defaultChecked className="accent-[#00a278]" />
                             <label htmlFor={`nse-${uid}`} className="text-xs text-[var(--text-muted)]">NSE</label>
                             <input type="radio" name={`exchange-${uid}`} id={`bse-${uid}`} className="accent-[#00a278]" />
-                            <label htmlFor={`bse-${uid}`} className="text-xs text-[var(--text-muted)]">BSE {stockPrice.toFixed(2)}</label>
+                            <label htmlFor={`bse-${uid}`} className="text-xs text-[var(--text-muted)]">BSE {currentLivePrice.toFixed(2)}</label>
                         </div>
                     </div>
 
@@ -214,7 +268,7 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
                     <div className="flex gap-6">
                         <div className="flex flex-col">
                             <span className="text-[10px] text-[#00a278] uppercase font-semibold">Available Margin</span>
-                            <span className="text-sm font-bold text-[var(--text-primary)]">₹ 0.00</span>
+                            <span className="text-sm font-bold text-[var(--text-primary)]">₹ {userBalance.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] text-[#00a278] uppercase font-semibold">Charges</span>
