@@ -13,6 +13,13 @@ class AngelOneRestAPI {
     constructor() {
         this.smartApi = null;
         this.isInitialized = false;
+
+        // Rate limiting queue for candle data requests
+        this.candleRequestQueue = [];
+        this.isProcessingCandleQueue = false;
+        // Angel One API rate limit: typically 3 requests per second
+        this.CANDLE_REQUEST_DELAY_MS = 350; // Delay between API calls
+        this.MAX_RETRIES = 3;
     }
 
     /**
@@ -220,7 +227,63 @@ class AngelOneRestAPI {
     }
 
     /**
+     * Process the candle data request queue sequentially to respect rate limits
+     */
+    async processCandleQueue() {
+        if (this.isProcessingCandleQueue || this.candleRequestQueue.length === 0) {
+            return;
+        }
+
+        this.isProcessingCandleQueue = true;
+
+        while (this.candleRequestQueue.length > 0) {
+            const request = this.candleRequestQueue[0]; // Peek at the next request
+
+            try {
+                // Execute the API call
+                const data = await this.smartApi.getCandleData({
+                    exchange: request.params.exchange || 'NSE',
+                    symboltoken: request.params.symboltoken,
+                    interval: request.params.interval,
+                    fromdate: request.params.fromdate,
+                    todate: request.params.todate
+                });
+
+                // Request successful, resolve and remove from queue
+                request.resolve(data);
+                this.candleRequestQueue.shift();
+
+            } catch (error) {
+                // Check if it's a rate limit error (Too Many Requests / 429) or other retryable error
+                const isRateLimitError = error?.message?.includes('Too Many Requests') || error?.message?.includes('429');
+                
+                if (isRateLimitError && request.retries < this.MAX_RETRIES) {
+                    logger.warn(`Rate limit hit for ${request.params.symboltoken}. Retrying (${request.retries + 1}/${this.MAX_RETRIES})...`);
+                    request.retries++;
+                    
+                    // We DO NOT shift from the queue. We wait longer and try again.
+                    await new Promise(resolve => setTimeout(resolve, this.CANDLE_REQUEST_DELAY_MS * 3)); // Backoff longer
+                    continue; // Re-evaluate the while loop (same request)
+                } else {
+                    // Max retries reached or a non-retryable error
+                    logger.error(`Failed to fetch candle data for ${request.params.symboltoken} after ${request.retries} retries:`, error?.message || error);
+                    request.reject(error);
+                    this.candleRequestQueue.shift();
+                }
+            }
+
+            // Enforce delay between successful calls to avoid hitting rate limits proactively
+            if (this.candleRequestQueue.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, this.CANDLE_REQUEST_DELAY_MS));
+            }
+        }
+
+        this.isProcessingCandleQueue = false;
+    }
+
+    /**
      * Get historical candle data
+     * Parses the request into a promise queue to respect API rate limits.
      * @param {object} params - { exchange, symboltoken, interval, fromdate, todate }
      */
     async getCandleData({ exchange, symboltoken, interval, fromdate, todate }) {
@@ -229,43 +292,39 @@ class AngelOneRestAPI {
             throw new Error('REST API not initialized');
         }
 
-        try {
-            // Debug Log to see what arguments are actually passed
-            console.log('DEBUG CANDLE ARGS:', JSON.stringify({ exchange, symboltoken, interval, fromdate, todate }));
-
-            logger.info(`Fetching candle data: Token=${symboltoken}, Exch=${exchange}, Interval=${interval}, From=${fromdate}, To=${todate}`);
-
-            // Validate input
-            if (!symboltoken || !interval || !fromdate || !todate) {
-                logger.error('Missing required parameters for getCandleData');
-                return [];
-            }
-
-            const data = await this.smartApi.getCandleData({
-                exchange: exchange || 'NSE',
-                symboltoken,
-                interval,
-                fromdate,
-                todate
-            });
-
-            // Log raw response for debugging
-            console.log('Raw Candle Data Response:', JSON.stringify(data));
-
-            if (data && data.status && data.data) {
-                logger.success(`Fetched ${data.data.length} candles for ${symboltoken}`);
-                return data.data;
-            } else {
-                logger.warn(`No candle data returned for ${symboltoken}. Status: ${data?.status}, Message: ${data?.message}`);
-                // Log full response if it fails
-                console.log('Failed Candle Response:', JSON.stringify(data));
-                return [];
-            }
-        } catch (error) {
-            logger.error(`Failed to fetch candle data for ${symboltoken}:`, error.message);
-            console.error(error);
-            throw error;
+        // Validate input
+        if (!symboltoken || !interval || !fromdate || !todate) {
+            logger.error('Missing required parameters for getCandleData');
+            return [];
         }
+
+        logger.info(`Queueing candle data request: Token=${symboltoken}, Exch=${exchange}, Interval=${interval}, From=${fromdate}, To=${todate}`);
+
+        // Return a Promise that will be resolved/rejected by the queue processor
+        return new Promise((resolve, reject) => {
+            const queueItem = {
+                params: { exchange, symboltoken, interval, fromdate, todate },
+                resolve: (data) => {
+                    if (data && data.status && data.data) {
+                        logger.success(`Fetched ${data.data.length} candles for ${symboltoken}`);
+                        resolve(data.data);
+                    } else {
+                        logger.warn(`No candle data returned for ${symboltoken}. Status: ${data?.status}, Message: ${data?.message}`);
+                        resolve([]);
+                    }
+                },
+                reject,
+                retries: 0
+            };
+
+            this.candleRequestQueue.push(queueItem);
+
+            // Trigger queue processing if it's not already running
+            this.processCandleQueue().catch(err => {
+                logger.error('Error in candle queue processor:', err);
+                this.isProcessingCandleQueue = false;
+            });
+        });
     }
 }
 
