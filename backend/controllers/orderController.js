@@ -68,10 +68,15 @@ export const placeOrder = async (req, res) => {
         }
 
         if (user.tradingBalance <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Trading balance is zero or negative. Cannot place orders."
-            });
+            // Bypass this check if the user is selling equity (NSE or BSE), 
+            // because they can sell their holdings regardless of balance.
+            // For options (NFO), we still check.
+            if (!(transactiontype === 'SELL' && (exchange === 'NSE' || exchange === 'BSE'))) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Trading balance is zero or negative. Cannot place orders."
+                });
+            }
         }
 
         const estimatedCost = (marketPrice || price || 0) * quantity;
@@ -84,7 +89,7 @@ export const placeOrder = async (req, res) => {
         }
 
         // --- NEW: SELL VALIDATION ---
-        if (transactiontype === 'SELL') {
+        if (transactiontype === 'SELL' && (exchange === 'NSE' || exchange === 'BSE')) {
             const completedOrders = await Order.find({
                 userId,
                 tradingsymbol,
@@ -101,7 +106,7 @@ export const placeOrder = async (req, res) => {
             if (netQty < quantity) {
                 return res.status(400).json({
                     success: false,
-                    message: `Insufficient holdings. You only have ${netQty} shares of ${tradingsymbol}.`
+                    message: "You Don't have enough holdings to sell"
                 });
             }
         }

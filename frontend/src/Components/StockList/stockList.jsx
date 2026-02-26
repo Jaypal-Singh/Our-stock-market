@@ -122,7 +122,7 @@ function StockList() {
                 // Merge live data into instruments
                 if (liveData && Array.isArray(liveData)) {
                     mergedStocks = instruments.map(inst => {
-                        const live = liveData.find(l => l.token === inst.token);
+                        const live = liveData.find(l => String(l.token) === String(inst.token));
                         if (live) {
                             return {
                                 ...inst,
@@ -171,7 +171,7 @@ function StockList() {
         setActiveStocks(prevActiveStocks => {
             let hasUpdates = false;
             const nextStocks = prevActiveStocks.map(ast => {
-                const live = stocks.find(s => s.token === ast.token);
+                const live = stocks.find(s => String(s.token || s.symboltoken) === String(ast.token || ast.symboltoken));
                 if (live && (live.ltp !== ast.ltp || live.change !== ast.change || live.lastUpdated !== ast.lastUpdated)) {
                     hasUpdates = true;
                     return { ...ast, ...live };

@@ -2,7 +2,7 @@
 import React from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-const PositionsTable = ({ positions = [] }) => {
+const PositionsTable = ({ positions = [], onAction }) => {
     // Format positions for display
     const formattedPositions = positions.map(pos => {
         const pnl = pos.totalPnl || 0;
@@ -23,7 +23,9 @@ const PositionsTable = ({ positions = [] }) => {
             pnl: `${isProfit ? '+' : ''}₹${pnl.toFixed(2)}`,
             pnlPercent: `${isProfit ? '+' : ''}${pnlPercent.toFixed(2)}%`,
             isProfit,
-            rawPnl: pnl
+            rawPnl: pnl,
+            rawPos: pos,
+            isFnO: pos.exchange === 'NFO' || pos.exchange === 'BFO' || pos.exchange === 'MCX' || pos.exchange === 'CDS' || pos.tradingsymbol?.includes('CE') || pos.tradingsymbol?.includes('PE')
         };
     });
 
@@ -48,6 +50,7 @@ const PositionsTable = ({ positions = [] }) => {
                             <th className="py-3 text-right font-bold">Avg. Price</th>
                             <th className="py-3 text-right font-bold">LTP</th>
                             <th className="py-3 text-right font-bold pr-4">P&L</th>
+                            <th className="py-3 text-right font-bold pr-4 w-32">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -87,11 +90,27 @@ const PositionsTable = ({ positions = [] }) => {
                                             {pos.isProfit ? <ArrowUpRight size={12} className="text-green-500" /> : <ArrowDownRight size={12} className="text-red-500" />}
                                         </div>
                                     </td>
+                                    <td className="py-4 text-right pr-4 align-middle">
+                                        {pos.isFnO && (
+                                            <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onAction && onAction('sell', pos.rawPos); }}
+                                                    className="bg-[var(--bg-secondary)] text-red-500 px-3 py-1.5 rounded text-xs font-bold border border-[var(--border-primary)] hover:bg-red-500/10 transition-colors">
+                                                    EXIT
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onAction && onAction('buy', pos.rawPos); }}
+                                                    className="bg-[var(--accent-primary)] text-white px-3 py-1.5 rounded text-xs font-bold hover:opacity-90 transition-colors">
+                                                    ADD
+                                                </button>
+                                            </div>
+                                        )}
+                                    </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="text-center text-[var(--text-muted)] py-8">No positions found. Place orders to see positions here.</td>
+                                <td colSpan="7" className="text-center text-[var(--text-muted)] py-8">No positions found. Place orders to see positions here.</td>
                             </tr>
                         )}
                     </tbody>
@@ -137,14 +156,20 @@ const PositionsTable = ({ positions = [] }) => {
                             </div>
 
                             {/* Action Buttons for Mobile */}
-                            <div className="flex gap-2">
-                                <button className="flex-1 bg-[var(--bg-secondary)] text-red-500 py-2 rounded text-xs font-bold border border-[var(--border-primary)] hover:bg-red-500/10 transition-colors">
-                                    EXIT
-                                </button>
-                                <button className="flex-1 bg-[var(--accent-primary)] text-white py-2 rounded text-xs font-bold hover:opacity-90 transition-colors">
-                                    ADD MORE
-                                </button>
-                            </div>
+                            {pos.isFnO && (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onAction && onAction('sell', pos.rawPos); }}
+                                        className="flex-1 bg-[var(--bg-secondary)] text-red-500 py-2 rounded text-xs font-bold border border-[var(--border-primary)] hover:bg-red-500/10 transition-colors">
+                                        EXIT
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onAction && onAction('buy', pos.rawPos); }}
+                                        className="flex-1 bg-[var(--accent-primary)] text-white py-2 rounded text-xs font-bold hover:opacity-90 transition-colors">
+                                        ADD MORE
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))
                 ) : (

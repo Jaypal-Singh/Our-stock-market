@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Diamond } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -32,6 +33,16 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const intervalRef = useRef(null);
     const dropdownRef = useRef(null);
+    const navigate = useNavigate();
+
+    const handleIndexClick = (idx) => {
+        setIsDropdownOpen(false);
+        if (variant === 'mobile') {
+            navigate('/trade/stock-details', { state: { stock: idx } });
+        } else {
+            navigate('/trade/watchlist', { state: { stock: idx } });
+        }
+    };
 
     const fetchIndicesData = async () => {
         try {
@@ -109,7 +120,11 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
                         const isUp = idx.change >= 0;
                         const exchange = idx.exch_seg === 'BSE' ? 'BSE' : 'NSE';
                         return (
-                            <div key={idx.token} className="min-w-[200px] p-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] flex flex-col justify-between shadow-sm">
+                            <div
+                                key={idx.token}
+                                onClick={() => handleIndexClick(idx)}
+                                className="min-w-[200px] p-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] flex flex-col justify-between shadow-sm cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors"
+                            >
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="font-semibold text-[var(--text-secondary)] text-sm">{idx.symbol}</span>
                                     <span className="font-bold text-[var(--text-secondary)] text-sm">{formatPrice(idx.ltp)}</span>
@@ -136,7 +151,10 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
                 const isUp = idx.change >= 0;
                 return (
                     <React.Fragment key={idx.token}>
-                        <div className="flex flex-col leading-tight px-4">
+                        <div
+                            className="flex flex-col leading-tight px-4 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => handleIndexClick(idx)}
+                        >
                             <span className="font-semibold text-[var(--text-secondary)] text-[13px]">{idx.symbol}</span>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className={`font-bold text-[13px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
@@ -181,7 +199,11 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
                         {allIndices.map(idx => {
                             const isUp = idx.change >= 0;
                             return (
-                                <div key={idx.token} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-primary)]/30 cursor-pointer">
+                                <div
+                                    key={idx.token}
+                                    onClick={() => handleIndexClick(idx)}
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-primary)]/30 cursor-pointer"
+                                >
                                     <div className="flex items-center gap-2">
                                         <Diamond size={10} className="text-[var(--accent-primary)] fill-[var(--accent-primary)]" />
                                         <span className="text-[13px] font-semibold text-[var(--text-secondary)]">{idx.symbol}</span>
@@ -197,13 +219,6 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
                                 </div>
                             );
                         })}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-4 py-3 border-t border-[var(--border-primary)] text-center">
-                        <span className="text-xs font-bold text-[var(--accent-primary)] cursor-pointer hover:opacity-80 transition-colors uppercase tracking-wider">
-                            View All Indices
-                        </span>
                     </div>
                 </div>
             )}

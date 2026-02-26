@@ -138,7 +138,8 @@ const useAngelOneSocket = (dynamicStocks = null) => {
         socket.emit('subscribe_stocks', {
             tokens: stocksToSubscribe.map(s => ({
                 token: s.token || s.symboltoken,
-                exchange: s.exchange || s.exch_seg || 'NSE'
+                exchange: s.exchange || s.exch_seg || 'NSE',
+                exch_seg: s.exch_seg || s.exchange || 'NSE'
             })),
             mode: 2
         });
@@ -170,7 +171,7 @@ const useAngelOneSocket = (dynamicStocks = null) => {
     }, [socket, isConnected, stocks.length]);
 
     const addStock = async (newStock) => {
-        if (stocks.find(s => (s.token || s.symboltoken) === (newStock.token || newStock.symboltoken))) return;
+        if (stocks.find(s => String(s.token || s.symboltoken) === String(newStock.token || newStock.symboltoken))) return;
         setStocks(prev => [...prev, newStock]);
     };
 
