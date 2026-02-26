@@ -149,12 +149,24 @@ function OptionChain() {
       });
       const json = await res.json();
 
-      if (!json.success) {
+      if (!json.success || !json.data || json.data.length === 0) {
         // Customize the message if we know it's a data-less response
         setError(json.message || "No data available for this expiry.");
         setRows([]);
         setOptionTokens([]);
         setCachedAt(null);
+
+        // Auto-skip to the next expiry if no data is found
+        if (expiries && expiries.length > 0) {
+          const currentIndex = expiries.indexOf(expiry);
+          if (currentIndex !== -1 && currentIndex < expiries.length - 1) {
+            console.log(`No data for ${expiry}, auto-skipping to ${expiries[currentIndex + 1]}`);
+            setExpiry(expiries[currentIndex + 1]);
+            // Clear the 5-sec cooldown so it can fetch the next expiry immediately
+            setCooldown(0);
+            lastFetchTime.current = 0;
+          }
+        }
       } else {
         const optionData = json.data ?? [];
         setRows(optionData);
@@ -182,11 +194,39 @@ function OptionChain() {
     } finally {
       setLoading(false);
     }
-  }, [underlyingName, expiry, isIndexSupported]);
+  }, [underlyingName, expiry, expiries, isIndexSupported]);
 
   useEffect(() => {
     fetchGreeks();
   }, [fetchGreeks]);
+
+  // Auto-skip to next expiry if no trading activity is found after a short timeout
+  useEffect(() => {
+    if (!loading && rows.length > 0 && optionTokens.length > 0 && liveOptionData.length > 0) {
+      const checkData = () => {
+        // Exclude underlying index from check
+        const optionLive = liveOptionData.filter(s => s.token !== underlyingInfo?.token);
+        return optionLive.some(s => s.ltp > 0 || s.volume > 0);
+      };
+
+      if (checkData()) return;
+
+      const timer = setTimeout(() => {
+        if (!checkData() && expiries.length > 0) {
+          const currentIndex = expiries.indexOf(expiry);
+          if (currentIndex !== -1 && currentIndex < expiries.length - 1) {
+            console.log(`Auto-skipping ${expiry} because no trading activity found.`);
+            setError(`No trading activity for ${formatExpiry(expiry)}. Auto-skipping...`);
+            setExpiry(expiries[currentIndex + 1]);
+            setCooldown(0);
+            if (lastFetchTime) lastFetchTime.current = 0;
+          }
+        }
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, rows, optionTokens, liveOptionData, expiry, expiries, underlyingInfo]);
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
   const ColHeader = ({ label, cls = "" }) => (
@@ -503,7 +543,7 @@ function OptionChain() {
                       {isAtm && (
                         <tr>
                           <td colSpan="9" className="p-0 h-[2px] bg-[#f23645] relative">
-                            <div className="absolute top-[-8px] right-[calc(50%-40px)] bg-[#1e222d] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10">
+                            <div className="absolute top-[-8px] left-1/2 -translate-x-1/2 bg-[#1e222d] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10 w-auto text-center min-w-[50px]">
                               {Number(currentSpotPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </td>
@@ -518,9 +558,9 @@ function OptionChain() {
                         <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'CE' })}>
                           <div className="flex w-full h-full items-center">
                             <div className="flex-1 p-2 text-left text-[#b2b5be] pl-4">{formatVol(ceVolume)}</div>
+                            <div className="flex-1 p-2 text-right text-[#b2b5be]">—</div>
                             {/* Live OI data or fallback */}
                             <div className="flex-1 p-2 text-right text-[#b2b5be]">{ceLiveData?.oi ? Number(ceLiveData.oi).toLocaleString('en-IN') : (ce.oi || "—")}</div>
-                            <div className="flex-1 p-2 text-right text-[#b2b5be]">—</div>
                             <div className={`flex-1 p-2 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[#b2b5be]'}`}>
                               {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
                               {ceChangePercent !== 0 && (
@@ -549,8 +589,8 @@ function OptionChain() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 p-2 text-left text-[#b2b5be]">—</div>
                             <div className="flex-1 p-2 text-left text-[#b2b5be]">{peLiveData?.oi ? Number(peLiveData.oi).toLocaleString('en-IN') : (pe.oi || "—")}</div>
+                            <div className="flex-1 p-2 text-left text-[#b2b5be]">—</div>
                             <div className="flex-1 p-2 text-right text-[#b2b5be] pr-4">{formatVol(peVolume)}</div>
                           </div>
                           {hoveredSide?.index === i && hoveredSide?.side === 'PE' && <ActionTooltip optRaw={pe} optLive={peLiveData} />}

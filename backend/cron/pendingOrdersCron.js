@@ -141,16 +141,32 @@ const checkAndExecutePendingOrders = async () => {
 
             if (!currentPrice) continue; // Quote not found for this token
 
-            const targetPrice = order.price;
-
+            const isStopLoss = order.ordertype === 'STOPLOSS_MARKET' || order.ordertype === 'STOPLOSS_LIMIT';
+            
             // Limit Order Logic
-            // BUY: Execute if current price is LESS THAN OR EQUAL to limit price
-            if (order.transactiontype === 'BUY' && currentPrice <= targetPrice) {
-                await executeOrder(order, currentPrice);
-            }
-            // SELL: Execute if current price is GREATER THAN OR EQUAL to limit price
-            else if (order.transactiontype === 'SELL' && currentPrice >= targetPrice) {
-                await executeOrder(order, currentPrice);
+            if (!isStopLoss) {
+                // BUY: Execute if current price is LESS THAN OR EQUAL to limit price
+                if (order.transactiontype === 'BUY' && currentPrice <= order.price) {
+                    await executeOrder(order, currentPrice);
+                }
+                // SELL: Execute if current price is GREATER THAN OR EQUAL to limit price
+                else if (order.transactiontype === 'SELL' && currentPrice >= order.price) {
+                    await executeOrder(order, currentPrice);
+                }
+            } 
+            // Stop Loss Logic (Real stock market logic)
+            else {
+                // Determine the trigger threshold
+                const trigger = order.triggerprice || order.stoploss || order.price;
+
+                // BUY (Covering a Short): Execute if current price RISES to or ABOVE trigger price
+                if (order.transactiontype === 'BUY' && currentPrice >= trigger) {
+                    await executeOrder(order, currentPrice);
+                }
+                // SELL (Exiting a Long): Execute if current price FALLS to or BELOW trigger price
+                else if (order.transactiontype === 'SELL' && currentPrice <= trigger) {
+                    await executeOrder(order, currentPrice);
+                }
             }
         }
 
