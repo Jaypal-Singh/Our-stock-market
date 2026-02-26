@@ -3,6 +3,7 @@ import { ArrowLeft, Settings, Minus, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { placeOrder } from '../../../../services/angelOneService';
 import { useToast } from '../../../../context/ToastContext';
+import axios from 'axios';
 
 const MobileSellOrder = () => {
     const { showToast } = useToast();
@@ -23,6 +24,40 @@ const MobileSellOrder = () => {
     const [price, setPrice] = useState(stock.price);
     const [orderType, setOrderType] = useState('Market');
     const [isLoading, setIsLoading] = useState(false);
+    const [userBalance, setUserBalance] = useState(0);
+
+    // Fetch user balance
+    useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (!userInfo || !userInfo.token) return;
+
+                const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+
+                const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
+                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+                window.dispatchEvent(new Event("userInfoUpdated"));
+                setUserBalance(data.tradingBalance);
+            } catch (error) {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (userInfo && userInfo.tradingBalance !== undefined) {
+                    setUserBalance(userInfo.tradingBalance);
+                }
+            }
+        };
+        fetchBalance();
+
+        const updateFromStorage = () => {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (userInfo && userInfo.tradingBalance !== undefined) {
+                setUserBalance(userInfo.tradingBalance);
+            }
+        };
+        window.addEventListener('userInfoUpdated', updateFromStorage);
+        return () => window.removeEventListener('userInfoUpdated', updateFromStorage);
+    }, []);
 
     // Update price when stock changes
     useEffect(() => {
@@ -79,6 +114,12 @@ const MobileSellOrder = () => {
             const response = await placeOrder(orderData);
 
             if (response.success) {
+                if (response.data && response.data.tradingBalance !== undefined) {
+                    const currentUserInfo = JSON.parse(localStorage.getItem("userInfo")) || {};
+                    currentUserInfo.tradingBalance = response.data.tradingBalance;
+                    localStorage.setItem("userInfo", JSON.stringify(currentUserInfo));
+                    window.dispatchEvent(new Event("userInfoUpdated"));
+                }
                 showToast(`Sell Order Placed! ID: ${response.data.angelOrderId}`, "success");
                 const targetTab = orderType === 'Market' ? 'Order History' : 'Open Orders';
                 navigate('/trade/orders', { state: { activeTab: targetTab, refresh: Date.now() } });
@@ -225,7 +266,7 @@ const MobileSellOrder = () => {
                 </div>
                 <div className="flex justify-between items-center mb-4 font-bold">
                     <span className="text-[var(--text-primary)] text-sm">₹{(price * quantity).toFixed(2)} <span className="text-[#f23645] text-xs">+ Charges</span></span>
-                    <span className="text-[var(--text-primary)] text-sm">₹0.00</span>
+                    <span className="text-[var(--text-primary)] text-sm">₹{userBalance.toFixed(2)}</span>
                 </div>
                 <button
                     onClick={handleSell}

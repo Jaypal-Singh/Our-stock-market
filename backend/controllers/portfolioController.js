@@ -36,7 +36,7 @@ export const getHoldings = async (req, res) => {
             });
         }
 
-        // ── Group by tradingsymbol ──────────────────────────────────────────
+        // ── Group by tradingsymbol using FIFO ────────────────────────────────
         const symbolMap = {};
 
         for (const order of completedOrders) {
@@ -47,10 +47,10 @@ export const getHoldings = async (req, res) => {
                     symboltoken: order.symboltoken,
                     exchange: order.exchange,
                     producttype: order.producttype,
-                    buyQty: 0,
-                    sellQty: 0,
-                    buyValue: 0,   // sum of (qty × avgPrice) for BUY orders
-                    sellValue: 0,   // sum of (qty × avgPrice) for SELL orders
+                    buyLots: [], // Array of { qty, price }
+                    sellLots: [], // Array for tracking shorts if needed
+                    realizedPnl: 0,
+                    netQty: 0
                 };
             }
 
@@ -59,61 +59,104 @@ export const getHoldings = async (req, res) => {
             const price = order.averagePrice || order.price || 0;
 
             if (order.transactiontype === 'BUY') {
-                pos.buyQty += qty;
-                pos.buyValue += qty * price;
-            } else {
-                pos.sellQty += qty;
-                pos.sellValue += qty * price;
+                pos.netQty += qty;
+
+                // If closing a short position
+                if (pos.sellLots.length > 0) {
+                    let remainingBuyQty = qty;
+                    while (remainingBuyQty > 0 && pos.sellLots.length > 0) {
+                        const oldestSell = pos.sellLots[0];
+                        if (oldestSell.qty <= remainingBuyQty) {
+                            pos.realizedPnl += (oldestSell.price - price) * oldestSell.qty;
+                            remainingBuyQty -= oldestSell.qty;
+                            pos.sellLots.shift();
+                        } else {
+                            pos.realizedPnl += (oldestSell.price - price) * remainingBuyQty;
+                            oldestSell.qty -= remainingBuyQty;
+                            remainingBuyQty = 0;
+                        }
+                    }
+                    if (remainingBuyQty > 0) pos.buyLots.push({ qty: remainingBuyQty, price });
+                } else {
+                    pos.buyLots.push({ qty, price });
+                }
+            } else if (order.transactiontype === 'SELL') {
+                pos.netQty -= qty;
+
+                // Match with buy lots (FIFO for Long positions)
+                if (pos.buyLots.length > 0) {
+                    let remainingSellQty = qty;
+                    while (remainingSellQty > 0 && pos.buyLots.length > 0) {
+                        const oldestBuy = pos.buyLots[0];
+                        if (oldestBuy.qty <= remainingSellQty) {
+                            pos.realizedPnl += (price - oldestBuy.price) * oldestBuy.qty;
+                            remainingSellQty -= oldestBuy.qty;
+                            pos.buyLots.shift();
+                        } else {
+                            pos.realizedPnl += (price - oldestBuy.price) * remainingSellQty;
+                            oldestBuy.qty -= remainingSellQty;
+                            remainingSellQty = 0;
+                        }
+                    }
+                    if (remainingSellQty > 0) pos.sellLots.push({ qty: remainingSellQty, price });
+                } else {
+                    pos.sellLots.push({ qty, price });
+                }
             }
         }
 
-        // ── Build holdings array (only where netQty > 0) ──────────────────
+        // ── Build holdings array (only where netQty !== 0) ──────────────────
         const holdings = [];
         let totalInvested = 0;
         let totalRealizedPnl = 0;
 
         for (const pos of Object.values(symbolMap)) {
-            const netQty = pos.buyQty - pos.sellQty;
-            const avgBuyPrice = pos.buyQty > 0 ? pos.buyValue / pos.buyQty : 0;
-            const avgSellPrice = pos.sellQty > 0 ? pos.sellValue / pos.sellQty : 0;
+            totalRealizedPnl += pos.realizedPnl;
 
-            // Realized P&L from matched lots
-            const matchedQty = Math.min(pos.buyQty, pos.sellQty);
-            const realizedPnl = matchedQty > 0
-                ? (avgSellPrice - avgBuyPrice) * matchedQty
-                : 0;
+            // Calculate current invested value & net quantity from remaining buyLots
+            let currentInvested = 0;
+            let currentQty = 0;
+            for (const lot of pos.buyLots) {
+                currentInvested += lot.qty * lot.price;
+                currentQty += lot.qty;
+            }
 
-            totalRealizedPnl += realizedPnl;
+            // Short quantities
+            let shortInvested = 0;
+            let shortQty = 0;
+            for (const lot of pos.sellLots) {
+                shortInvested += lot.qty * lot.price;
+                shortQty += lot.qty;
+            }
 
-            // Only add to holdings if user still holds shares
-            if (netQty > 0) {
-                const investedValue = netQty * avgBuyPrice;
-                totalInvested += investedValue;
+            if (currentQty > 0) {
+                const avgBuyPrice = currentInvested / currentQty;
+                totalInvested += currentInvested;
 
                 holdings.push({
                     tradingsymbol: pos.tradingsymbol,
                     symboltoken: pos.symboltoken,
                     exchange: pos.exchange,
                     producttype: pos.producttype,
-                    netQty,
+                    netQty: currentQty,
                     avgBuyPrice: parseFloat(avgBuyPrice.toFixed(2)),
-                    investedValue: parseFloat(investedValue.toFixed(2)),
-                    realizedPnl: parseFloat(realizedPnl.toFixed(2)),
-                    // ltp & unrealizedPnl will be enriched by frontend via live price feed
+                    investedValue: parseFloat(currentInvested.toFixed(2)),
+                    realizedPnl: parseFloat(pos.realizedPnl.toFixed(2)),
                     ltp: null,
                     unrealizedPnl: null,
                 });
-            } else if (netQty < 0) {
+            } else if (shortQty > 0) {
                 // SHORT position — included for completeness
+                const avgShortPrice = shortInvested / shortQty;
                 holdings.push({
                     tradingsymbol: pos.tradingsymbol,
                     symboltoken: pos.symboltoken,
                     exchange: pos.exchange,
                     producttype: pos.producttype,
-                    netQty,   // negative = short
-                    avgBuyPrice: parseFloat(avgBuyPrice.toFixed(2)),
-                    investedValue: 0,
-                    realizedPnl: parseFloat(realizedPnl.toFixed(2)),
+                    netQty: -shortQty,   // negative = short
+                    avgBuyPrice: parseFloat(avgShortPrice.toFixed(2)), // Storing short entry price here
+                    investedValue: parseFloat(shortInvested.toFixed(2)),
+                    realizedPnl: parseFloat(pos.realizedPnl.toFixed(2)),
                     ltp: null,
                     unrealizedPnl: null,
                 });
@@ -159,30 +202,78 @@ export const getPortfolioSummary = async (req, res) => {
 
         const completedOrders = await Order.find({ userId, orderstatus: 'complete' });
 
-        let totalBuyValue = 0;
-        let totalSellValue = 0;
-        let totalBuyQty = 0;
-        let totalSellQty = 0;
-        const symbols = new Set();
+        // Group by tradingsymbol using FIFO to calculate summary
+        const symbolMap = {};
+        let totalOrders = 0;
 
         for (const order of completedOrders) {
+            totalOrders++;
+            const key = order.tradingsymbol;
+            if (!symbolMap[key]) {
+                symbolMap[key] = {
+                    buyLots: [],
+                    sellLots: [],
+                    realizedPnl: 0,
+                    netQty: 0
+                };
+            }
+
+            const pos = symbolMap[key];
             const qty = order.filledShares || order.quantity;
             const price = order.averagePrice || order.price || 0;
-            symbols.add(order.tradingsymbol);
 
             if (order.transactiontype === 'BUY') {
-                totalBuyValue += qty * price;
-                totalBuyQty += qty;
+                pos.netQty += qty;
+                if (pos.sellLots.length > 0) {
+                    let remainingBuyQty = qty;
+                    while (remainingBuyQty > 0 && pos.sellLots.length > 0) {
+                        const oldestSell = pos.sellLots[0];
+                        if (oldestSell.qty <= remainingBuyQty) {
+                            pos.realizedPnl += (oldestSell.price - price) * oldestSell.qty;
+                            remainingBuyQty -= oldestSell.qty;
+                            pos.sellLots.shift();
+                        } else {
+                            pos.realizedPnl += (oldestSell.price - price) * remainingBuyQty;
+                            oldestSell.qty -= remainingBuyQty;
+                            remainingBuyQty = 0;
+                        }
+                    }
+                    if (remainingBuyQty > 0) pos.buyLots.push({ qty: remainingBuyQty, price });
+                } else {
+                    pos.buyLots.push({ qty, price });
+                }
             } else {
-                totalSellValue += qty * price;
-                totalSellQty += qty;
+                pos.netQty -= qty;
+                if (pos.buyLots.length > 0) {
+                    let remainingSellQty = qty;
+                    while (remainingSellQty > 0 && pos.buyLots.length > 0) {
+                        const oldestBuy = pos.buyLots[0];
+                        if (oldestBuy.qty <= remainingSellQty) {
+                            pos.realizedPnl += (price - oldestBuy.price) * oldestBuy.qty;
+                            remainingSellQty -= oldestBuy.qty;
+                            pos.buyLots.shift();
+                        } else {
+                            pos.realizedPnl += (price - oldestBuy.price) * remainingSellQty;
+                            oldestBuy.qty -= remainingSellQty;
+                            remainingSellQty = 0;
+                        }
+                    }
+                    if (remainingSellQty > 0) pos.sellLots.push({ qty: remainingSellQty, price });
+                } else {
+                    pos.sellLots.push({ qty, price });
+                }
             }
         }
 
-        const realizedPnl = totalSellValue - (totalSellQty > 0 && totalBuyQty > 0
-            ? (totalBuyValue / totalBuyQty) * totalSellQty
-            : 0);
-        const netInvested = totalBuyValue - totalSellValue;
+        let realizedPnl = 0;
+        let netInvested = 0;
+
+        for (const pos of Object.values(symbolMap)) {
+            realizedPnl += pos.realizedPnl;
+            for (const lot of pos.buyLots) {
+                netInvested += lot.qty * lot.price;
+            }
+        }
 
         return res.status(200).json({
             success: true,
@@ -191,8 +282,8 @@ export const getPortfolioSummary = async (req, res) => {
                 totalSellValue: parseFloat(totalSellValue.toFixed(2)),
                 netInvested: parseFloat(Math.max(netInvested, 0).toFixed(2)),
                 realizedPnl: parseFloat(realizedPnl.toFixed(2)),
-                totalOrders: completedOrders.length,
-                uniqueSymbols: symbols.size,
+                totalOrders: totalOrders,
+                uniqueSymbols: Object.keys(symbolMap).length,
             }
         });
 

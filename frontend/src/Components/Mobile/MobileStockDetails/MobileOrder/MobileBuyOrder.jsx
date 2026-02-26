@@ -3,6 +3,8 @@ import { ArrowLeft, Settings, Minus, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { placeOrder } from '../../../../services/angelOneService';
 import { useToast } from '../../../../context/ToastContext';
+import axios from 'axios';
+import useAngelOneSocket from '../../../../Hooks/useAngelOneSocket';
 
 const MobileBuyOrder = () => {
     const { showToast } = useToast();
@@ -25,18 +27,64 @@ const MobileBuyOrder = () => {
     const [price, setPrice] = useState(stock.price);
     const [orderType, setOrderType] = useState('Market');
     const [isLoading, setIsLoading] = useState(false);
+    const [userBalance, setUserBalance] = useState(0);
+
+    // Fetch user balance
+    useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (!userInfo || !userInfo.token) return;
+
+                const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+
+                const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
+                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+                window.dispatchEvent(new Event("userInfoUpdated"));
+                setUserBalance(data.tradingBalance);
+            } catch (error) {
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                if (userInfo && userInfo.tradingBalance !== undefined) {
+                    setUserBalance(userInfo.tradingBalance);
+                }
+            }
+        };
+        fetchBalance();
+
+        const updateFromStorage = () => {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (userInfo && userInfo.tradingBalance !== undefined) {
+                setUserBalance(userInfo.tradingBalance);
+            }
+        };
+        window.addEventListener('userInfoUpdated', updateFromStorage);
+        return () => window.removeEventListener('userInfoUpdated', updateFromStorage);
+    }, []);
+
+    // Subscribe to live price for this specific stock
+    const dynamicStocks = React.useMemo(() => {
+        return [{ token: String(stock.token), name: stock.name, exchange: stock.exchange || "NSE" }];
+    }, [stock.token, stock.name, stock.exchange]);
+
+    const { stocks: liveStocks } = useAngelOneSocket(dynamicStocks);
+    const liveStock = liveStocks?.find(s => String(s.token || s.symboltoken) === String(stock.token));
+
+    const currentLivePrice = liveStock?.ltp || stock.price;
+    const currentLiveChange = liveStock?.change ?? stock.change;
+    const currentLiveChangePercent = liveStock?.changePercent ?? stock.percent;
 
     // Update price when stock changes
     useEffect(() => {
-        setPrice(stock.price);
+        setPrice(currentLivePrice);
     }, [stock.name]);
 
     // Update price when live price changes (only in active Market mode)
     useEffect(() => {
         if (orderType === 'Market') {
-            setPrice(stock.price);
+            setPrice(currentLivePrice);
         }
-    }, [stock.price, orderType]);
+    }, [currentLivePrice, orderType]);
 
     const handleQuantityChange = (increment) => {
         setQuantity(prev => Math.max(1, prev + increment));
@@ -73,7 +121,7 @@ const MobileBuyOrder = () => {
                 producttype: productType === "Intraday" ? "INTRADAY" : "DELIVERY",
                 duration: "DAY",
                 price: orderType === 'Market' ? 0 : price,
-                marketPrice: stock.price, // Capture current market price
+                marketPrice: currentLivePrice, // Capture current live market price
                 quantity: quantity,
                 userId: userId
             };
@@ -81,6 +129,12 @@ const MobileBuyOrder = () => {
             const response = await placeOrder(orderData);
 
             if (response.success) {
+                if (response.data && response.data.tradingBalance !== undefined) {
+                    const currentUserInfo = JSON.parse(localStorage.getItem("userInfo")) || {};
+                    currentUserInfo.tradingBalance = response.data.tradingBalance;
+                    localStorage.setItem("userInfo", JSON.stringify(currentUserInfo));
+                    window.dispatchEvent(new Event("userInfoUpdated"));
+                }
                 showToast(`Buy Order Placed! ID: ${response.data.angelOrderId}`, "success");
                 // Navigate to Orders page with smart tab selection
                 const targetTab = orderType === 'Market' ? 'Order History' : 'Open Orders';
@@ -110,8 +164,8 @@ const MobileBuyOrder = () => {
                         <div className="text-[10px] font-bold flex items-center gap-1">
                             <span className="text-[var(--text-muted)]">{stock.exchange}</span>
                             <span className="text-[var(--text-secondary)]">•</span>
-                            <span className="text-[var(--text-primary)]">₹{stock.price}</span>
-                            <span className={stock.isUp ? 'text-[#089981]' : 'text-[#f23645]'}>{stock.percent}%</span>
+                            <span className="text-[var(--text-primary)]">₹{Number(currentLivePrice).toFixed(2)}</span>
+                            <span className={currentLiveChangePercent >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}>{Number(currentLiveChangePercent).toFixed(2)}%</span>
                         </div>
                     </div>
                 </div>
@@ -198,7 +252,7 @@ const MobileBuyOrder = () => {
                         <span className="text-xs font-bold text-[var(--text-secondary)]">Place order at</span>
                         <div className="flex bg-[var(--bg-main)] rounded-full p-1 border border-[var(--border-primary)]">
                             <button
-                                onClick={() => { setOrderType('Market'); setPrice(stock.price); }} // Reset to Market/Current Price
+                                onClick={() => { setOrderType('Market'); setPrice(currentLivePrice); }} // Reset to Market/Current Live Price
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${orderType === 'Market'
                                     ? 'bg-[var(--border-primary)] text-[var(--text-primary)] shadow-sm'
                                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
@@ -228,7 +282,7 @@ const MobileBuyOrder = () => {
                 </div>
                 <div className="flex justify-between items-center mb-4 font-bold">
                     <span className="text-[var(--text-primary)] text-sm">₹{(price * quantity).toFixed(2)} <span className="text-[var(--accent-primary)] text-xs">+ Charges</span></span>
-                    <span className="text-[var(--text-primary)] text-sm">₹0.00</span>
+                    <span className="text-[var(--text-primary)] text-sm">₹{userBalance.toFixed(2)}</span>
                 </div>
                 <button
                     onClick={handleBuy}
