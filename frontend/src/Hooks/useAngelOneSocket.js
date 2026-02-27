@@ -41,16 +41,14 @@ const useAngelOneSocket = (dynamicStocks = null) => {
             try {
                 setIsLoading(true);
 
-                // Check market status
-                const status = await getMarketStatus();
-                setMarketStatus(status);
+                // Check market status (non-blocking)
+                getMarketStatus().then(status => setMarketStatus(status)).catch(() => {});
 
-                // Always fetch initial data via REST to get 'Previous Close'
-                if (status && !hasLoadedRestData.current) {
-                    const currentTokens = stocks.map(s => s.token || s.symboltoken).filter(Boolean);
-                    if (currentTokens.length === 0) return;
-
+                // Always fetch REST data for new/changed token sets (works even when market is closed)
+                if (!hasLoadedRestData.current) {
                     const stocksToFetch = stocks.filter(s => s.token || s.symboltoken);
+                    if (stocksToFetch.length === 0) return;
+
                     const quotes = await fetchStockQuotes(stocksToFetch);
 
                     if (quotes && quotes.length > 0) {
@@ -59,7 +57,7 @@ const useAngelOneSocket = (dynamicStocks = null) => {
                                 const token = stock.token || stock.symboltoken;
                                 const quote = quotes.find(q => q.token === token);
                                 if (quote) {
-                                    const change = quote.ltp - quote.close;
+                                    const change = (quote.ltp || 0) - (quote.close || 0);
                                     const changePercent = quote.close > 0 ? (change / quote.close) * 100 : 0;
 
                                     return {
@@ -71,6 +69,8 @@ const useAngelOneSocket = (dynamicStocks = null) => {
                                         low: quote.low,
                                         close: quote.close,
                                         volume: quote.volume,
+                                        oi: quote.oi || 0,
+                                        oiChange: quote.oiChange || 0,
                                         change,
                                         changePercent: parseFloat(changePercent.toFixed(2)),
                                         percent: `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
@@ -92,7 +92,7 @@ const useAngelOneSocket = (dynamicStocks = null) => {
         };
 
         loadInitialData();
-    }, [stocks.length, hasLoadedRestData.current]);
+    }, [stocks.length]);
 
     const tickBuffer = useRef([]);
 
@@ -141,7 +141,7 @@ const useAngelOneSocket = (dynamicStocks = null) => {
                 exchange: s.exchange || s.exch_seg || 'NSE',
                 exch_seg: s.exch_seg || s.exchange || 'NSE'
             })),
-            mode: 2
+            mode: 3
         });
 
         lastSubscribedTokens.current = currentSet;

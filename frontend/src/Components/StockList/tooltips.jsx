@@ -1,6 +1,6 @@
-import { BarChart2, Flag, Link, MoreVertical, Trash2 } from "lucide-react";
+import { BarChart2, Flag, Link, Pin, PinOff, Trash2 } from "lucide-react";
 
-function Tooltips({ position, onBuy, onSell, onDelete, onMarketDepth, onOptionChain }) {
+function Tooltips({ position, onBuy, onSell, onDelete, onMarketDepth, onOptionChain, onPin, isPinned }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
@@ -23,27 +23,25 @@ function Tooltips({ position, onBuy, onSell, onDelete, onMarketDepth, onOptionCh
                 </button>
 
                 {/* Icons */}
-                <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                    <button onClick={onMarketDepth} className="hover:text-white transition-colors cursor-pointer" title="Market Depth">
+                <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+                    <button onClick={onMarketDepth} className="hover:text-[var(--accent-primary)] transition-colors cursor-pointer" title="Market Depth">
                         <BarChart2 size={16} />
                     </button>
 
-                    <button onClick={onOptionChain} className="hover:text-white transition-colors cursor-pointer" title="Option Chain/Link">
+                    <button onClick={onOptionChain} className="hover:text-[var(--accent-primary)] transition-colors cursor-pointer" title="Option Chain">
                         <Link size={16} />
                     </button>
 
-                    <button className="hover:text-white transition-colors cursor-pointer" title="Pin">
-                        <Flag size={16} />
+                    <button
+                        onClick={onPin}
+                        className={`transition-colors cursor-pointer ${isPinned ? 'text-[#f0b90b] hover:text-[#f0b90b]/70' : 'hover:text-[#f0b90b]'}`}
+                        title={isPinned ? "Unpin" : "Pin to Top"}
+                    >
+                        {isPinned ? <PinOff size={16} /> : <Pin size={16} />}
                     </button>
 
-                    <button onClick={onDelete} className="hover:text-red-400 transition-colors cursor-pointer" title="Delete">
+                    <button onClick={onDelete} className="hover:text-red-500 transition-colors cursor-pointer" title="Delete">
                         <Trash2 size={16} />
-                    </button>
-
-                    <div className="h-4 w-px bg-[var(--border-primary)] mx-0.5"></div>
-
-                    <button className="hover:text-white transition-colors cursor-pointer" title="More">
-                        <MoreVertical size={16} />
                     </button>
                 </div>
 
@@ -61,3 +59,4 @@ function Tooltips({ position, onBuy, onSell, onDelete, onMarketDepth, onOptionCh
 }
 
 export default Tooltips;
+

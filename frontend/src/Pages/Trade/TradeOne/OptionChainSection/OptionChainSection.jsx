@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import ReactDOM from "react-dom";
 import { ArrowLeft, RefreshCw, AlertCircle, ChevronDown, Clock, Info, BarChart2, Star, Plus } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAngelOneSocket from "../../../../hooks/useAngelOneSocket";
@@ -40,22 +41,22 @@ const fmt4 = (v) => (v == null ? "—" : Number(v).toFixed(4));
 const fmt2 = (v) => (v == null ? "—" : Number(v).toFixed(2));
 
 // ─── Component ────────────────────────────────────────────────────────────────
-function OptionChain() {
+function OptionChain({ initialUnderlying }) {
   const navigate = useNavigate();
   const location = useLocation();
   const stock = location.state?.stock;
   const isMobileView = location.pathname.includes("/trade/option-chain");
 
-  // Index/stock selector
-  const stockName = stock?.name ?? stock?.symbol ?? "";
-  // Default to the provided stock, otherwise default to NIFTY
+  // Index/stock selector — prop takes priority, then location.state, then NIFTY
+  const stockName = initialUnderlying || stock?.name || stock?.symbol || "";
   const defaultIndex = stockName || "NIFTY";
   const [selectedIndex, setSelectedIndex] = useState(defaultIndex);
 
-  // Sync selected index if the user clicks a different stock in the watchlist
+  // Sync selected index if the user navigates to a new stock or prop changes
   useEffect(() => {
-    setSelectedIndex(defaultIndex);
-  }, [defaultIndex]);
+    if (initialUnderlying) setSelectedIndex(initialUnderlying);
+    else setSelectedIndex(defaultIndex);
+  }, [initialUnderlying, defaultIndex]);
 
   const underlyingName = selectedIndex;
 
@@ -83,6 +84,26 @@ function OptionChain() {
   const [selectedStockForOrder, setSelectedStockForOrder] = useState(null);
 
   const [hoveredSide, setHoveredSide] = useState(null); // { index: number, side: 'CE' | 'PE' }
+
+  // Toast notification
+  const [toast, setToast] = useState(null); // { msg, ok }
+  const showToast = (msg, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  // Watchlist picker
+  const [allWatchlists, setAllWatchlists] = useState([]);
+  const [watchlistPicker, setWatchlistPicker] = useState(null); // { optRaw, optLive }
+
+  useEffect(() => {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    if (!userInfo?.token) return;
+    fetch('/api/watchlist/getAllWatchlists', { headers: { Authorization: `Bearer ${userInfo.token}` } })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAllWatchlists(data); })
+      .catch(() => { });
+  }, []);
 
   const marketOpen = useMemo(() => isMarketOpen(), []);
 
@@ -201,6 +222,10 @@ function OptionChain() {
   }, [fetchGreeks]);
 
   // Auto-skip to next expiry if no trading activity is found after a short timeout
+  // NOTE: Disabled because when the market is closed or connection is slow,
+  // REST API fetching takes > 5 seconds, making this 3s timeout falsely trigger
+  // and race through all expiries recursively.
+  /*
   useEffect(() => {
     if (!loading && rows.length > 0 && optionTokens.length > 0 && liveOptionData.length > 0) {
       const checkData = () => {
@@ -227,6 +252,7 @@ function OptionChain() {
       return () => clearTimeout(timer);
     }
   }, [loading, rows, optionTokens, liveOptionData, expiry, expiries, underlyingInfo]);
+  */
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
   const ColHeader = ({ label, cls = "" }) => (
@@ -262,30 +288,15 @@ function OptionChain() {
     } else if (action === 'chart') {
       navigate('/trade/chart', { state: { stock: stockObj } });
     } else if (action === 'watchlist') {
-      // Small trigger to add to watchlist if we had a global context for it, or just a direct API call
-      // For now we will ping the default watchlist
-      fetch('/api/watchlist/Default Watchlist/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: stockObj.name,
-          symbol: stockObj.symbol,
-          token: stockObj.token,
-          exch_seg: stockObj.exch_seg,
-          instrumenttype: stockObj.exch_seg.includes('FO') ? 'OPTIDX' : 'EQ',
-          expiry: expiry
-        })
-      }).then(r => r.json()).then(res => {
-        if (res.success) alert(`${stockObj.symbol} added to Watchlist!`);
-        else alert(res.message);
-      }).catch(e => console.error(e));
+      // Show watchlist picker instead of adding directly
+      setWatchlistPicker({ optRaw, optLive });
     }
   };
 
   const ActionTooltip = ({ optRaw, optLive }) => {
     if (!optRaw?.token) return null;
     return (
-      <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-1 py-1 shadow-lg z-20">
+      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-1 py-1 shadow-lg z-20">
         <button
           onClick={(e) => { e.stopPropagation(); handleAction('buy', optRaw, optLive); }}
           className="bg-[#089981]/10 text-[#089981] hover:bg-[#089981] hover:text-white px-2 py-0.5 rounded text-[10px] font-bold transition-colors">
@@ -313,11 +324,65 @@ function OptionChain() {
   const underlyingLive = underlyingInfo?.token ? liveOptionData.find(s => s.token === underlyingInfo.token) : null;
   const currentSpotPrice = underlyingLive?.ltp || stock?.price;
 
+  const addToWatchlist = (watchlistName) => {
+    const { optRaw, optLive } = watchlistPicker;
+    setWatchlistPicker(null);
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const authToken = userInfo?.token;
+    if (!authToken) { showToast('Please login first', false); return; }
+    const symbol = optRaw.symbol || '';
+    fetch('/api/watchlist/addByToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({ token: optRaw.token, watchlistName })
+    }).then(r => r.json()).then(res => {
+      if (res.success) {
+        showToast(`✓ ${symbol} added to "${watchlistName}"`);
+        // Tell StockList to refresh
+        window.dispatchEvent(new CustomEvent('watchlist-updated', { detail: { watchlistName } }));
+      } else {
+        showToast(res.message || 'Already in watchlist', false);
+      }
+    }).catch(e => { console.error(e); showToast('Failed to add to watchlist', false); });
+  };
+
   return (
     <div
       className={`bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans ${isMobileView ? "h-full flex flex-col" : "p-4 min-h-full"
         } relative`}
     >
+      {/* ── Watchlist Picker Modal (Inline Fixed Overlay) ── */}
+      {watchlistPicker && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setWatchlistPicker(null)}>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-2xl p-4 min-w-[240px]" onClick={e => e.stopPropagation()}>
+            <div className="text-[13px] font-bold text-[var(--text-primary)] mb-3">Add to Watchlist</div>
+            {allWatchlists.length === 0 ? (
+              <div className="text-[11px] text-[var(--text-muted)] py-2">No watchlists found. Please create one first.</div>
+            ) : (
+              <div className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto customscrollbar pr-2">
+                {allWatchlists.map(wl => (
+                  <button
+                    key={wl._id}
+                    onClick={() => addToWatchlist(wl.name)}
+                    className="text-left text-[12px] px-3 py-2 rounded hover:bg-[var(--accent-primary)] hover:text-white text-[var(--text-secondary)] transition-colors border border-transparent hover:border-[var(--accent-primary)]"
+                  >
+                    📋 {wl.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setWatchlistPicker(null)} className="mt-3 w-full text-[12px] font-medium text-[var(--text-muted)] hover:text-[#f23645] transition-colors py-2 border border-[var(--border-primary)] hover:border-[#f23645] rounded rounded-md">✕ Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded shadow-lg text-[12px] font-medium transition-all ${toast.ok ? 'bg-[#089981] text-white' : 'bg-[#f23645] text-white'
+          }`}>
+          {toast.msg}
+        </div>
+      )}
       {/* ── Overlays ── */}
       {showBuyWindow && selectedStockForOrder && (
         <BuyWindow
@@ -478,7 +543,7 @@ function OptionChain() {
         {/* ── Greeks Table ── */}
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto overflow-y-auto customscrollbar flex-1">
-            <table className="w-full text-[11px] text-center border-collapse min-w-[800px]">
+            <table className="w-full text-[13px] text-center border-collapse min-w-[800px]">
               <thead className="sticky top-0 z-10 bg-[var(--bg-main)]">
                 {/* Group header */}
                 <tr className="border-b border-[var(--border-primary)] text-[var(--text-secondary)]">
@@ -520,6 +585,21 @@ function OptionChain() {
                   const ceVolume = ceLiveData?.volume ?? ce.tradeVolume ?? "—";
                   const peVolume = peLiveData?.volume ?? pe.tradeVolume ?? "—";
 
+                  // OI and OI Change from live data
+                  const ceOi = ceLiveData?.oi || ce.oi || null;
+                  const peOi = peLiveData?.oi || pe.oi || null;
+                  const ceOiChange = ceLiveData?.oiChange ?? null;
+                  const peOiChange = peLiveData?.oiChange ?? null;
+
+                  // Format OI Change with colour
+                  const fmtOiChng = (v) => {
+                    if (v == null) return "—";
+                    if (v >= 10000000) return (v / 10000000).toFixed(2) + 'Cr';
+                    if (v >= 100000) return (v / 100000).toFixed(2) + 'L';
+                    if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                    return v.toString();
+                  };
+
                   // Format volume into K/M/Cr
                   const formatVol = (v) => {
                     if (v === "—" || !v) return "—";
@@ -542,7 +622,7 @@ function OptionChain() {
                     <React.Fragment key={i}>
                       {isAtm && (
                         <tr>
-                          <td colSpan="9" className="p-0 h-[2px] bg-[#f23645] relative">
+                          <td colSpan="9" className="p-0 h-[3px] bg-[#f23645] relative">
                             <div className="absolute top-[-8px] left-1/2 -translate-x-1/2 bg-[var(--bg-secondary)] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10 w-auto text-center min-w-[50px]">
                               {Number(currentSpotPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
@@ -551,17 +631,23 @@ function OptionChain() {
                       )}
 
                       <tr
-                        className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-card)] transition-colors leading-5 group"
+                        className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-card)] transition-colors leading-6 group"
                         onMouseLeave={() => setHoveredSide(null)}
                       >
                         {/* ──────────────── CALL Side ──────────────── */}
-                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'CE' })}>
+                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => !isMobileView && setHoveredSide({ index: i, side: 'CE' })} onClick={() => {
+                          if (isMobileView && ce.token) {
+                            navigate('/trade/stock-details', { state: { stock: { token: ce.token, name: ce.symbol, symbol: ce.symbol, exch_seg: ce.exch_seg, lotsize: ce.lotsize, price: ceLiveData?.ltp || 0, ltp: ceLiveData?.ltp || 0, change: ceLiveData?.change || 0, percent: ceLiveData?.changePercent || 0, isUp: ceLiveData?.changePercent >= 0 } } });
+                          }
+                        }}>
                           <div className="flex w-full h-full items-center">
-                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)] pl-4">{formatVol(ceVolume)}</div>
-                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)]">—</div>
+                            <div className="flex-1 p-3 text-left text-[var(--text-secondary)] pl-4">{formatVol(ceVolume)}</div>
+                            <div className={`flex-1 p-3 text-right ${ceOiChange > 0 ? 'text-[#089981]' : ceOiChange < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
+                              {ceOiChange != null ? <>{fmtOiChng(ceOiChange)}<span className="text-[10px] ml-1 opacity-70">({ceOi && ceOi > 0 ? ((ceOiChange / ceOi) * 100).toFixed(1) + '%' : '—'})</span></> : "—"}
+                            </div>
                             {/* Live OI data or fallback */}
-                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)]">{ceLiveData?.oi ? Number(ceLiveData.oi).toLocaleString('en-IN') : (ce.oi || "—")}</div>
-                            <div className={`flex-1 p-2 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
+                            <div className="flex-1 p-3 text-right text-[var(--text-secondary)]">{ceOi ? Number(ceOi).toLocaleString('en-IN') : "—"}</div>
+                            <div className={`flex-1 p-3 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
                               {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
                               {ceChangePercent !== 0 && (
                                 <span className="text-[10px] ml-1 opacity-80">
@@ -574,14 +660,18 @@ function OptionChain() {
                         </td>
 
                         {/* ──────────────── Strike ──────────────── */}
-                        <td className={`p-2 bg-[var(--bg-secondary)] group-hover:bg-[var(--bg-card)] font-bold text-[12px] border-x border-[var(--border-primary)] whitespace-nowrap text-center ${isAtm ? 'text-[var(--text-primary)]' : 'text-[var(--text-primary)]'}`}>
+                        <td className={`p-3 bg-[var(--bg-secondary)] group-hover:bg-[var(--bg-card)] font-bold text-[14px] border-x border-[var(--border-primary)] whitespace-nowrap text-center ${isAtm ? 'text-[var(--text-primary)]' : 'text-[var(--text-primary)]'}`}>
                           {Number(row.strikePrice).toLocaleString("en-IN")}
                         </td>
 
                         {/* ──────────────── PUT Side ──────────────── */}
-                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'PE' })}>
+                        <td colSpan={4} className="p-0 relative" onMouseEnter={() => !isMobileView && setHoveredSide({ index: i, side: 'PE' })} onClick={() => {
+                          if (isMobileView && pe.token) {
+                            navigate('/trade/stock-details', { state: { stock: { token: pe.token, name: pe.symbol, symbol: pe.symbol, exch_seg: pe.exch_seg, lotsize: pe.lotsize, price: peLiveData?.ltp || 0, ltp: peLiveData?.ltp || 0, change: peLiveData?.change || 0, percent: peLiveData?.changePercent || 0, isUp: peLiveData?.changePercent >= 0 } } });
+                          }
+                        }}>
                           <div className="flex w-full h-full items-center">
-                            <div className={`flex-1 p-2 text-left font-medium pl-4 ${peChangePercent > 0 ? 'text-[#089981]' : peChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
+                            <div className={`flex-1 p-3 text-left font-medium pl-4 ${peChangePercent > 0 ? 'text-[#089981]' : peChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
                               {peLtp !== "—" ? `₹${peLtp}` : "—"}
                               {peChangePercent !== 0 && (
                                 <span className="text-[10px] ml-1 opacity-80">
@@ -589,9 +679,11 @@ function OptionChain() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)]">{peLiveData?.oi ? Number(peLiveData.oi).toLocaleString('en-IN') : (pe.oi || "—")}</div>
-                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)]">—</div>
-                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)] pr-4">{formatVol(peVolume)}</div>
+                            <div className="flex-1 p-3 text-left text-[var(--text-secondary)]">{peOi ? Number(peOi).toLocaleString('en-IN') : "—"}</div>
+                            <div className={`flex-1 p-3 text-left ${peOiChange > 0 ? 'text-[#089981]' : peOiChange < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
+                              {peOiChange != null ? <>{fmtOiChng(peOiChange)}<span className="text-[10px] ml-1 opacity-70">({peOi && peOi > 0 ? ((peOiChange / peOi) * 100).toFixed(1) + '%' : '—'})</span></> : "—"}
+                            </div>
+                            <div className="flex-1 p-3 text-right text-[var(--text-secondary)] pr-4">{formatVol(peVolume)}</div>
                           </div>
                           {hoveredSide?.index === i && hoveredSide?.side === 'PE' && <ActionTooltip optRaw={pe} optLive={peLiveData} />}
                         </td>

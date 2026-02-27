@@ -58,6 +58,7 @@ function TradeOne() {
   const location = useLocation(); // Get location
   const stock = location.state?.stock; // Extract stock
   const initialTab = location.state?.initialTab || "chart";
+  const underlyingName = location.state?.underlyingName || null;
   const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
@@ -76,7 +77,7 @@ function TradeOne() {
             className={`h-full text-sm font-bold border-b-2 transition-colors ${activeTab === "chart"
               ? "border-[var(--accent-primary)] text-[var(--accent-primary)]"
               : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
+              }cursor-pointer`}
           >
             Chart
           </button>
@@ -85,7 +86,7 @@ function TradeOne() {
             className={`h-full text-sm font-bold border-b-2 transition-colors ${activeTab === "overview"
               ? "border-[var(--accent-primary)] text-[var(--accent-primary)]"
               : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
+              }cursor-pointer`}
           >
             Overview
           </button>
@@ -95,7 +96,7 @@ function TradeOne() {
             className={`h-full text-sm font-bold border-b-2 transition-colors ${activeTab === "optionchain"
               ? "border-[var(--accent-primary)] text-[var(--accent-primary)]"
               : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
+              }cursor-pointer`}
           >
             Option Chain
           </button>
@@ -114,7 +115,7 @@ function TradeOne() {
 
         {activeTab === "optionchain" && (
           <div className="h-full overflow-y-auto customscrollbar">
-            <OptionChainSection />
+            <OptionChainSection initialUnderlying={underlyingName} />
           </div>
         )}
       </div>

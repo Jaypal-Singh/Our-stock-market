@@ -1,4 +1,5 @@
 import Watchlist from '../models/Watchlist.js';
+import Instrument from '../models/Instrument.js';
 
 // Create a new named watchlist
 export const createWatchlist = async (req, res) => {
@@ -79,12 +80,57 @@ export const addToWatchlist = async (req, res) => {
             return res.status(400).json({ message: 'Stock already in watchlist' });
         }
 
-        watchlist.stocks.push(stockId);
+        watchlist.stocks.unshift(stockId);
         await watchlist.save();
 
         res.status(201).json(watchlist);
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// Add to watchlist by instrument token (used by option chain / quick-add)
+export const addByToken = async (req, res) => {
+    try {
+        const { token, watchlistName } = req.body;
+        const userId = req.user._id;
+
+        if (!token) {
+            return res.status(400).json({ success: false, message: 'token is required' });
+        }
+
+        // Find the Instrument document for this token
+        const instrument = await Instrument.findOne({ token: String(token) });
+        if (!instrument) {
+            return res.status(404).json({ success: false, message: `Instrument not found for token: ${token}` });
+        }
+
+        // Find the target watchlist (by name, or user's first watchlist)
+        let watchlist;
+        if (watchlistName) {
+            watchlist = await Watchlist.findOne({ user: userId, name: watchlistName });
+        }
+        if (!watchlist) {
+            watchlist = await Watchlist.findOne({ user: userId });
+        }
+        if (!watchlist) {
+            // Create a default watchlist if user has none
+            watchlist = await Watchlist.create({ user: userId, name: 'Default Watchlist', stocks: [] });
+        }
+
+        const stockId = instrument._id;
+
+        if (watchlist.stocks.some(id => id.toString() === stockId.toString())) {
+            return res.status(200).json({ success: false, message: 'Already in watchlist' });
+        }
+
+        watchlist.stocks.unshift(stockId);
+        await watchlist.save();
+
+        return res.status(201).json({ success: true, message: `${instrument.symbol} added to ${watchlist.name}` });
+    } catch (error) {
+        console.error('addByToken error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 

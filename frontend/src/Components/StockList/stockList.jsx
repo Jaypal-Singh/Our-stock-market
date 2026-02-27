@@ -32,6 +32,7 @@ function StockList() {
     const [showBuyWindow, setShowBuyWindow] = useState(false);
     const [showSellWindow, setShowSellWindow] = useState(false);
     const [showMarketDepthWindow, setShowMarketDepthWindow] = useState(false);
+    const [pinnedTokens, setPinnedTokens] = useState(new Set());
 
     // New Detail Window State
     const [showDetailsWindow, setShowDetailsWindow] = useState(false);
@@ -76,6 +77,38 @@ function StockList() {
     const handleStockSelect = (stock) => {
         setSelectedDetailStock(stock);
         setShowDetailsWindow(true);
+    };
+
+    const handleOptionChainClick = (stock) => {
+        // On desktop, option chain is a tab inside TradeOne (at /trade/watchlist)
+        // On mobile, it's its own route at /trade/option-chain
+        navigate('/trade/watchlist', {
+            state: {
+                stock,
+                initialTab: 'optionchain',
+                underlyingName: stock.name || stock.symbol
+            }
+        });
+    };
+
+    const handlePinStock = (stock) => {
+        const token = stock.token;
+        const isPinned = pinnedTokens.has(token);
+        if (isPinned) {
+            // Unpin: remove from pinned set, move back to original position
+            setPinnedTokens(prev => { const next = new Set(prev); next.delete(token); return next; });
+            setActiveStocks(prev => {
+                const others = prev.filter(s => s.token !== token);
+                return [...others, stock]; // move to end (or keep as is)
+            });
+        } else {
+            // Pin: add to pinned set, move to top
+            setPinnedTokens(prev => new Set([...prev, token]));
+            setActiveStocks(prev => {
+                const filtered = prev.filter(s => s.token !== token);
+                return [stock, ...filtered];
+            });
+        }
     };
 
     // Fetch all watchlists (names) on mount
@@ -193,6 +226,23 @@ function StockList() {
             return hasUpdates ? nextStocks : prevActiveStocks;
         });
     }, [stocks]);
+
+    // Listen for watchlist-updated event from OptionChain (or anywhere)
+    useEffect(() => {
+        const handleWatchlistUpdated = async (e) => {
+            const updatedWatchlistName = e.detail?.watchlistName;
+            const currentName = activeWatchlist?.name || activeWatchlist;
+            // Reload if the updated watchlist matches active one
+            if (!updatedWatchlistName || updatedWatchlistName === currentName) {
+                if (typeof currentName === 'string') {
+                    await fetchWatchlistStocks(currentName);
+                }
+            }
+        };
+        window.addEventListener('watchlist-updated', handleWatchlistUpdated);
+        return () => window.removeEventListener('watchlist-updated', handleWatchlistUpdated);
+    }, [activeWatchlist]);
+
 
 
     // Add stock to active watchlist via backend API
@@ -405,7 +455,7 @@ function StockList() {
                     <div className="pl-3 border-l border-[var(--border-primary)] shrink-0">
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="text-[var(--text-muted)] hover:text-[var(--accent-primary)] p-1"
+                            className="text-[var(--text-muted)] hover:text-[var(--accent-primary)] p-1 cursor-pointer"
                         >
                             <Plus size={18} />
                         </button>
@@ -476,6 +526,9 @@ function StockList() {
                                             onSell={() => handleSellClick(stock)}
                                             onMarketDepth={() => handleMarketDepthClick(stock)}
                                             onDelete={() => handleRemoveStockFromWatchlist(stock)}
+                                            onOptionChain={() => handleOptionChainClick(stock)}
+                                            onPin={() => handlePinStock(stock)}
+                                            isPinned={pinnedTokens.has(stock.token)}
                                         />
                                     </div>
                                 )}
