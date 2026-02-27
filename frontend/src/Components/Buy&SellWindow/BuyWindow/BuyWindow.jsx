@@ -20,6 +20,9 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
     const [isLoading, setIsLoading] = useState(false);
     const [userBalance, setUserBalance] = useState(0);
+    const [isSlTargetChecked, setIsSlTargetChecked] = useState(false);
+    const [stopLoss, setStopLoss] = useState("");
+    const [target, setTarget] = useState("");
 
     // Fetch user balance
     useEffect(() => {
@@ -109,7 +112,9 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
                 price: isMarket ? 0 : price,
                 marketPrice: currentLivePrice, // Current live market price for accurate avg price execution
                 quantity: qty,
-                userId: userId
+                userId: userId,
+                stoploss: isSlTargetChecked && stopLoss ? Number(stopLoss) : undefined,
+                squareoff: isSlTargetChecked && target ? Number(target) : undefined
             };
 
             console.log("Placing Buy Order:", orderData);
@@ -240,12 +245,46 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
 
                         {/* Additional Options */}
                         <div className="flex items-center gap-2 mt-4">
-                            <button className="flex items-center justify-center h-4 w-4 rounded border border-[var(--border-primary)] text-[#00a278] hover:border-[#00a278]">
-                                {/* Checkbox Icon */}
+                            <button
+                                onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                                className={`flex items-center justify-center h-4 w-4 rounded border ${isSlTargetChecked ? "bg-[#00a278] border-[#00a278]" : "border-[var(--border-primary)]"} text-white hover:border-[#00a278] transition-colors`}
+                            >
+                                {isSlTargetChecked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                             </button>
-                            <span className="text-sm text-[#00a278] cursor-pointer hover:underline">Set Stop Loss / Target</span>
+                            <span
+                                onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                                className="text-sm text-[#00a278] cursor-pointer hover:underline select-none"
+                            >
+                                Set Stop Loss / Target
+                            </span>
                             <Settings size={14} className="text-[var(--text-muted)]" />
                         </div>
+
+                        {/* SL and Target Inputs */}
+                        {isSlTargetChecked && (
+                            <div className="flex gap-6 mt-4">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase">Stop Loss</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={stopLoss}
+                                        onChange={(e) => setStopLoss(e.target.value)}
+                                        className="w-24 bg-[var(--bg-secondary)] text-[var(--text-primary)] p-2 rounded border border-[var(--border-primary)] focus:border-[#f23645] focus:outline-none text-right hover:border-[#f23645]"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase">Target</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={target}
+                                        onChange={(e) => setTarget(e.target.value)}
+                                        className="w-24 bg-[var(--bg-secondary)] text-[var(--text-primary)] p-2 rounded border border-[var(--border-primary)] focus:border-[#00a278] focus:outline-none text-right hover:border-[#00a278]"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                     </div>
 

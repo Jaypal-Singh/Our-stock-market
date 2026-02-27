@@ -27,7 +27,11 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 0, stoc
     const [qty, setQty] = useState(0);
     const [price, setPrice] = useState(stockPrice); // Default to market price
     const [isMarket, setIsMarket] = useState(true); // Toggle between Limit and Market
+    const [isLoading, setIsLoading] = useState(false);
     const [userBalance, setUserBalance] = useState(0);
+    const [isSlTargetChecked, setIsSlTargetChecked] = useState(false);
+    const [stopLoss, setStopLoss] = useState("");
+    const [target, setTarget] = useState("");
 
     // Fetch user balance
     useEffect(() => {
@@ -117,7 +121,9 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 0, stoc
                 price: isMarket ? 0 : price,
                 marketPrice: currentLivePrice, // Current market price for avg price calculation
                 quantity: qty,
-                userId: userId
+                userId: userId,
+                stoploss: isSlTargetChecked && stopLoss ? Number(stopLoss) : undefined,
+                squareoff: isSlTargetChecked && target ? Number(target) : undefined
             };
 
             console.log("Placing Sell Order:", orderData);
@@ -140,6 +146,8 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 0, stoc
         } catch (error) {
             console.error("Order Execution Error:", error);
             showToast("Failed to place order", "error");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -244,12 +252,46 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 0, stoc
 
                         {/* Additional Options */}
                         <div className="flex items-center gap-2 mt-4">
-                            <button className="flex items-center justify-center h-4 w-4 rounded border border-[var(--border-primary)] text-[#f23645] hover:border-[#f23645]">
-                                {/* Checkbox Icon */}
+                            <button
+                                onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                                className={`flex items-center justify-center h-4 w-4 rounded border ${isSlTargetChecked ? "bg-[#f23645] border-[#f23645]" : "border-[var(--border-primary)]"} text-white hover:border-[#f23645] transition-colors`}
+                            >
+                                {isSlTargetChecked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                             </button>
-                            <span className="text-sm text-[#f23645] cursor-pointer hover:underline">Set Stop Loss / Target</span>
+                            <span
+                                onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                                className="text-sm text-[#f23645] cursor-pointer hover:underline select-none"
+                            >
+                                Set Stop Loss / Target
+                            </span>
                             <Settings size={14} className="text-[var(--text-muted)]" />
                         </div>
+
+                        {/* SL and Target Inputs */}
+                        {isSlTargetChecked && (
+                            <div className="flex gap-6 mt-4">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase">Stop Loss</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={stopLoss}
+                                        onChange={(e) => setStopLoss(e.target.value)}
+                                        className="w-24 bg-[var(--bg-secondary)] text-[var(--text-primary)] p-2 rounded border border-[var(--border-primary)] focus:border-[#00a278] focus:outline-none text-right hover:border-[#00a278]"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase">Target</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={target}
+                                        onChange={(e) => setTarget(e.target.value)}
+                                        className="w-24 bg-[var(--bg-secondary)] text-[var(--text-primary)] p-2 rounded border border-[var(--border-primary)] focus:border-[#f23645] focus:outline-none text-right hover:border-[#f23645]"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                     </div>
 
@@ -282,9 +324,10 @@ const SellWindow = ({ uid, stockName = "NHPC", stockSymbol, stockPrice = 0, stoc
 
                     <button
                         onClick={handleSell}
-                        className="bg-[#f23645] hover:bg-[#d9303c] text-white font-bold py-3 px-10 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wider text-sm"
+                        disabled={isLoading}
+                        className={`bg-[#f23645] hover:bg-[#d9303c] text-white font-bold py-3 px-10 rounded shadow-lg transition-all transform active:scale-95 uppercase tracking-wider text-sm ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        PLACE SELL ORDER
+                        {isLoading ? 'PLACING...' : 'PLACE SELL ORDER'}
                     </button>
                 </div>
 
