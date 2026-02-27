@@ -26,7 +26,7 @@ const SupportModal = ({ isOpen, onClose, title, icon, children }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+                        className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
                     >
                         <X size={20} />
                     </button>

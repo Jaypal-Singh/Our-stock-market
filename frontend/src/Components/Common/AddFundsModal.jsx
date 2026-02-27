@@ -32,7 +32,7 @@ const AddFundsModal = ({ isOpen, onClose, onAdd }) => {
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                         >
                             <X size={20} />
                         </button>

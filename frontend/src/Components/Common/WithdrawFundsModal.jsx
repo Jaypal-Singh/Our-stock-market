@@ -41,7 +41,7 @@ const WithdrawFundsModal = ({ isOpen, onClose, onWithdraw, currentBalance }) => 
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                         >
                             <X size={20} />
                         </button>
@@ -83,14 +83,14 @@ const WithdrawFundsModal = ({ isOpen, onClose, onWithdraw, currentBalance }) => 
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex-1 bg-transparent border border-[var(--border-primary)] hover:border-[var(--text-muted)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] font-medium py-3 rounded transition-colors"
+                                className="flex-1 bg-transparent border border-[var(--border-primary)] hover:border-[var(--text-muted)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] font-medium py-3 rounded transition-colors cursor-pointer"
                             >
                                 CANCEL
                             </button>
                             <button
                                 type="submit"
                                 disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > currentBalance}
-                                className="flex-1 bg-[#2962ff] hover:bg-[#1e54eb] disabled:bg-[#2962ff]/50 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition-colors"
+                                className="flex-1 bg-[#2962ff] hover:bg-[#1e54eb] disabled:bg-[#2962ff]/50 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition-colors cursor-pointer"
                             >
                                 WITHDRAW
                             </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, User, Mail, Shield, Calendar, Camera, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Mail, Shield, Calendar, Camera, X, Loader2, Eye, EyeOff, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
@@ -12,6 +12,11 @@ const Profile = () => {
 
     const [profilePic, setProfilePic] = useState(userInfo?.profilePic || null);
     const [isUploading, setIsUploading] = useState(false);
+    const [showId, setShowId] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
 
     if (!userInfo) {
         return (
@@ -68,6 +73,44 @@ const Profile = () => {
             console.error('Update error:', error);
             alert(error.message);
             return false;
+        }
+    };
+
+    const maskAccountId = (id) => {
+        if (!id || id.length < 6) return id;
+        const firstTwo = id.slice(0, 2);
+        const lastTwo = id.slice(-2);
+        return `${firstTwo}••••••••${lastTwo}`;
+    };
+
+    const handleVerifyPassword = async () => {
+        try {
+            setIsVerifying(true);
+            setPasswordError('');
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: userInfo.email,
+                    password: passwordInput,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Invalid password');
+            }
+
+            setShowId(true);
+            setShowPasswordModal(false);
+            setPasswordInput('');
+        } catch (error) {
+            setPasswordError(error.message || 'Invalid password. Please try again.');
+        } finally {
+            setIsVerifying(false);
         }
     };
 
@@ -179,7 +222,27 @@ const Profile = () => {
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest mb-1">{field.label}</p>
-                                    <p className="text-[var(--text-primary)] font-medium text-sm break-all">{field.value}</p>
+                                    {field.label === "Account ID" ? (
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-[var(--text-primary)] font-medium text-sm break-all">
+                                                {showId ? field.value : maskAccountId(field.value)}
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    if (showId) {
+                                                        setShowId(false);
+                                                    } else {
+                                                        setShowPasswordModal(true);
+                                                    }
+                                                }}
+                                                className="text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer flex items-center justify-center p-1 rounded"
+                                            >
+                                                {showId ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <p className="text-[var(--text-primary)] font-medium text-sm break-all">{field.value}</p>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -199,6 +262,69 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Password Verification Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-[var(--bg-card)] w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-[var(--border-primary)]">
+                        <div className="p-4 border-b border-[var(--border-primary)] flex justify-between items-center bg-[var(--bg-secondary)]">
+                            <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
+                                <Lock size={18} className="text-[var(--accent-primary)]" />
+                                Verify Identity
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowPasswordModal(false);
+                                    setPasswordInput('');
+                                    setPasswordError('');
+                                }}
+                                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)] rounded transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-sm text-[var(--text-muted)] mb-4">
+                                Please enter your password to view your full Account ID.
+                            </p>
+                            <input
+                                type="password"
+                                placeholder="Enter password"
+                                value={passwordInput}
+                                onChange={(e) => {
+                                    setPasswordInput(e.target.value);
+                                    setPasswordError('');
+                                }}
+                                className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] p-3 rounded-lg border border-[var(--border-primary)] focus:border-[var(--accent-primary)] focus:outline-none transition-colors"
+                                onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                                autoFocus
+                            />
+                            {passwordError && (
+                                <p className="text-red-500 text-xs mt-2">{passwordError}</p>
+                            )}
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowPasswordModal(false);
+                                        setPasswordInput('');
+                                        setPasswordError('');
+                                    }}
+                                    className="flex-1 py-2 rounded-lg border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer font-medium text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleVerifyPassword}
+                                    disabled={isVerifying || !passwordInput}
+                                    className="flex-1 py-2 rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium text-sm flex items-center justify-center gap-2"
+                                >
+                                    {isVerifying ? <Loader2 size={16} className="animate-spin" /> : 'Verify'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

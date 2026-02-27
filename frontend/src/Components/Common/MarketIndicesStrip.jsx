@@ -180,7 +180,7 @@ const MarketIndicesStrip = ({ variant = 'desktop' }) => {
                     className={`w-7 h-7 rounded border flex items-center justify-center transition-colors ${isDropdownOpen
                         ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
                         : 'border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)]'
-                        }`}
+                        } cursor-pointer`}
                 >
                     <ChevronDown size={14} className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>

@@ -33,7 +33,7 @@ const QuickSettings = () => {
                                 className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${fontSize === size
                                     ? 'bg-[var(--accent-primary)] text-white shadow-[var(--shadow-accent)]'
                                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                    }`}
+                                    } cursor-pointer`}
                             >
                                 {size}
                             </button>
@@ -55,7 +55,7 @@ const QuickSettings = () => {
                                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${theme === option.id
                                     ? 'bg-[var(--accent-primary)] text-white shadow-[var(--shadow-accent)]'
                                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                    }`}
+                                    } cursor-pointer`}
                             >
                                 {option.icon}
                                 {option.label}
