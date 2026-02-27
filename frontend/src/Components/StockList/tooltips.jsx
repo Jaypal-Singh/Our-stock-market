@@ -1,6 +1,6 @@
 import { BarChart2, Flag, Link, MoreVertical, Trash2 } from "lucide-react";
 
-function Tooltips({ position, onBuy, onSell, onDelete }) {
+function Tooltips({ position, onBuy, onSell, onDelete, onMarketDepth, onOptionChain }) {
     return (
         <div className="relative inline-block">
             {/* Tooltip Container */}
@@ -24,13 +24,12 @@ function Tooltips({ position, onBuy, onSell, onDelete }) {
 
                 {/* Icons */}
                 <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                    <button className="hover:text-white transition-colors cursor-pointer" title="Chart">
+                    <button onClick={onMarketDepth} className="hover:text-white transition-colors cursor-pointer" title="Market Depth">
                         <BarChart2 size={16} />
                     </button>
 
-                    <button className="hover:text-white transition-colors cursor-pointer" title="Market Depth">
+                    <button onClick={onOptionChain} className="hover:text-white transition-colors cursor-pointer" title="Option Chain/Link">
                         <Link size={16} />
-                        {/* Note: Screenshot showed a Link icon, assuming generic link or option chain */}
                     </button>
 
                     <button className="hover:text-white transition-colors cursor-pointer" title="Pin">

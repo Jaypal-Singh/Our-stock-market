@@ -1,35 +1,93 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import axios from 'axios';
+
+const getAuthConfig = () => {
+    try {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        if (!userInfo?.token) return null;
+        return { headers: { Authorization: `Bearer ${userInfo.token}` } };
+    } catch { return null; }
+};
 
 const MarketDepthBottomSheet = ({ isOpen, onClose, stock }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [depthData, setDepthData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Reset expansion state when opened/closed
     useEffect(() => {
         if (!isOpen) setIsExpanded(false);
     }, [isOpen]);
 
+    useEffect(() => {
+        let isMounted = true;
+        let intervalId;
+
+        const fetchData = async () => {
+            if (!isOpen || !stock?.token) return;
+            try {
+                const config = getAuthConfig();
+                if (!config) return;
+
+                const response = await axios.post('http://localhost:5000/api/angel/market-depth', {
+                    token: stock.token,
+                    exch_seg: stock.exch_seg || "NSE"
+                }, config);
+
+                if (isMounted && response.data.success && response.data.data) {
+                    setDepthData(response.data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch market depth:", error);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        if (isOpen) {
+            setIsLoading(true);
+            fetchData();
+            intervalId = setInterval(fetchData, 3000); // Poll every 3 seconds
+        }
+
+        return () => {
+            isMounted = false;
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [isOpen, stock?.token]);
+
     if (!isOpen) return null;
 
-    // Mock Data based on screenshot
-    const bids = [
-        { qty: 4335, price: 408.95, orders: 2 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-    ];
+    // Use live depth data or fallback to defaults
+    const depthList = depthData?.depth || { buy: [], sell: [] };
 
-    const asks = [
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-        { qty: 0, price: 0.00, orders: 0 },
-    ];
+    // Ensure 5 rows
+    const bids = Array.from({ length: 5 }, (_, i) => {
+        const b = depthList.buy[i];
+        return b ? { qty: b.quantity, orders: b.orders, price: b.price } : { qty: 0, orders: 0, price: 0 };
+    });
 
-    const totalBidQty = 4335;
-    const totalAskQty = 0;
+    const asks = Array.from({ length: 5 }, (_, i) => {
+        const s = depthList.sell[i];
+        return s ? { qty: s.quantity, orders: s.orders, price: s.price } : { qty: 0, orders: 0, price: 0 };
+    });
+
+    const totalBidQty = depthData?.totBuyQuan ?? 0;
+    const totalAskQty = depthData?.totSellQuan ?? 0;
+
+    const stats = {
+        open: (depthData?.open ?? 0).toFixed(2),
+        high: (depthData?.high ?? 0).toFixed(2),
+        low: (depthData?.low ?? 0).toFixed(2),
+        close: (depthData?.close ?? 0).toFixed(2),
+        avgPrice: (depthData?.avgPrice ?? 0).toFixed(2),
+        volume: depthData?.tradeVolume?.toLocaleString('en-IN') ?? "0",
+        lcl: (depthData?.lowerCircuit ?? 0).toFixed(2),
+        ucl: (depthData?.upperCircuit ?? 0).toFixed(2),
+        high52: (depthData?.['52WeekHigh'] ?? 0).toFixed(2),
+        low52: (depthData?.['52WeekLow'] ?? 0).toFixed(2),
+    };
 
     return (
         <>
@@ -58,107 +116,124 @@ const MarketDepthBottomSheet = ({ isOpen, onClose, stock }) => {
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center px-4 pb-2 border-b border-[var(--border-primary)]">
-                    <div className="flex items-center gap-4 w-full">
-                        <div className="flex-1 text-center">
-                            <div className="text-[10px] text-[var(--text-muted)]">Open</div>
-                            <div className="text-sm font-bold text-[var(--text-secondary)]">{stock?.open || "412.30"}</div>
+                <div className="flex justify-between items-center px-6 pt-5 pb-4 border-b border-[#2a2e39] bg-[#1c202b]">
+                    <div className="flex items-center gap-4 w-full justify-between">
+                        <div className="text-center">
+                            <div className="text-[11px] font-medium text-[#868993] mb-1">Open</div>
+                            <div className="text-[15px] font-bold text-white tracking-wide">{stats.open}</div>
                         </div>
-                        <div className="flex-1 text-center">
-                            <div className="text-[10px] text-[var(--text-muted)]">High</div>
-                            <div className="text-sm font-bold text-[var(--text-secondary)]">{stock?.high || "417.60"}</div>
+                        <div className="text-center">
+                            <div className="text-[11px] font-medium text-[#868993] mb-1">High</div>
+                            <div className="text-[15px] font-bold text-white tracking-wide">{stats.high}</div>
                         </div>
-                        <div className="flex-1 text-center">
-                            <div className="text-[10px] text-[var(--text-muted)]">Low</div>
-                            <div className="text-sm font-bold text-[var(--text-secondary)]">{stock?.low || "408.10"}</div>
+                        <div className="text-center">
+                            <div className="text-[11px] font-medium text-[#868993] mb-1">Low</div>
+                            <div className="text-[15px] font-bold text-white tracking-wide">{stats.low}</div>
                         </div>
-                        <div className="flex-1 text-center">
-                            <div className="text-[10px] text-[var(--text-muted)]">Close</div>
-                            <div className="text-sm font-bold text-[var(--text-secondary)]">{stock?.close || "419.15"}</div>
+                        <div className="text-center flex items-center justify-between gap-6">
+                            <div>
+                                <div className="text-[11px] font-medium text-[#868993] mb-1">Close</div>
+                                <div className="text-[15px] font-bold text-white tracking-wide">{stats.close}</div>
+                            </div>
+                            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#2a2e39] -mt-5 -mr-2 text-[#868993] hover:text-white transition-colors">
+                                <X size={18} />
+                            </button>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1 -mr-2 text-[var(--text-muted)]">
-                        <X size={20} />
-                    </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto customscrollbar p-4">
+                <div className="flex-1 overflow-y-auto customscrollbar bg-[#1c202b]">
                     {/* Bid/Ask Table */}
-                    <div className="bg-[var(--bg-secondary)] rounded-lg overflow-hidden mb-4 text-[var(--text-secondary)] text-xs border border-[var(--border-primary)]">
+                    <div className="bg-[#131722] overflow-hidden text-[#d1d4dc] text-[11px] pb-2">
                         {/* Header */}
-                        <div className="flex border-b border-[var(--border-primary)] font-bold text-[10px] text-[var(--text-muted)] bg-[var(--bg-secondary)]">
-                            <div className="flex-1 py-2 pl-4">Qty</div>
-                            <div className="flex-1 py-2 text-right">Buy Price</div>
-                            <div className="flex-1 py-2 pl-4">Sell price</div>
-                            <div className="flex-1 py-2 pr-4 text-right">Qty</div>
+                        <div className="flex border-b border-[#2a2e39] font-semibold text-[10px] text-[#868993] bg-[#1c202b] px-4 py-3">
+                            <div className="w-[20%] text-left">Qty</div>
+                            <div className="w-[30%] text-right pr-4">Buy Price</div>
+                            <div className="w-[30%] text-left pl-4">Sell price</div>
+                            <div className="w-[20%] text-right">Qty</div>
                         </div>
 
                         {/* Rows */}
-                        {bids.map((bid, i) => (
-                            <div key={i} className="flex border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-card)]">
-                                <div className="flex-1 py-2 pl-4 text-[var(--text-secondary)] font-medium">{bid.qty > 0 ? bid.qty : "0"}</div>
-                                <div className="flex-1 py-2 text-right text-[#089981] font-medium">{bid.price.toFixed(2)}</div>
-                                <div className="flex-1 py-2 pl-4 text-[#f23645] font-medium">{asks[i]?.price.toFixed(2) || "0.00"}</div>
-                                <div className="flex-1 py-2 pr-4 text-right text-[var(--text-secondary)] font-medium">{asks[i]?.qty > 0 ? asks[i].qty : "0"}</div>
-                            </div>
-                        ))}
-
-                        {/* Total Row */}
-                        <div className="flex border-t border-[var(--border-primary)] font-bold bg-[var(--bg-secondary)]">
-                            <div className="flex-1 py-2 pl-4 text-[#089981]">{totalBidQty}</div>
-                            <div className="flex-[2] py-2 text-center text-[var(--text-muted)]">Total Quanity</div>
-                            <div className="flex-1 py-2 pr-4 text-right text-[#f23645]">{totalAskQty}</div>
+                        <div className="px-4 pb-2">
+                            {bids.map((bid, i) => (
+                                <div key={i} className="flex border-b border-[#2a2e39] last:border-0 hover:bg-[#1e222d] py-3 items-center">
+                                    <div className="w-[20%] text-left text-[#d1d4dc] font-bold">{bid.qty > 0 ? bid.qty : "0"}</div>
+                                    <div className="w-[30%] text-right pr-4 text-[#089981] font-medium">{bid.price > 0 ? bid.price.toFixed(2) : "0.00"}</div>
+                                    <div className="w-[30%] text-left pl-4 text-[#f23645] font-medium">{asks[i]?.price > 0 ? asks[i].price.toFixed(2) : "0.00"}</div>
+                                    <div className="w-[20%] text-right text-[#d1d4dc] font-bold">{asks[i]?.qty > 0 ? asks[i].qty : "0"}</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Stats Cards */}
-                    <div className="bg-[var(--bg-secondary)] rounded-lg p-4 mb-4 border border-[var(--border-primary)]">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-[var(--text-secondary)]">Average Traded Price</span>
-                            <span className="text-xs font-bold text-[var(--text-secondary)]">{stock?.atp || "410.83"}</span>
-                        </div>
-                        <div className="flex justify-between items-center border-t border-[var(--border-primary)] pt-3">
-                            <span className="text-xs font-bold text-[var(--text-secondary)]">Volume</span>
-                            <span className="text-xs font-bold text-[var(--text-secondary)]">{stock?.volume || "8190851"}</span>
-                        </div>
-                    </div>
-
-                    {/* 52 Week Range */}
-                    <div className="bg-[var(--bg-secondary)] rounded-lg p-4 mb-4 border border-[var(--border-primary)]">
-                        <div className="text-center text-xs font-bold text-[var(--text-secondary)] mb-4">52 week range</div>
-                        <div className="relative h-2 bg-[var(--border-primary)] rounded-full mb-2">
-                            {/* Dots simulation */}
-                            <div className="flex justify-between absolute inset-0 items-center px-1">
-                                {[...Array(15)].map((_, i) => (
-                                    <div key={i} className={`w-1 h-1 rounded-full ${i < 8 ? 'bg-[#f23645]' : 'bg-[#089981]'}`}></div>
-                                ))}
+                    <div className="p-4 bg-[#1c202b]">
+                        {/* Total Quantity Bar Component */}
+                        <div className="mb-6 pt-2">
+                            <div className="h-2.5 w-full bg-[#f23645] rounded-full overflow-hidden relative mb-3">
+                                <div
+                                    className="absolute top-0 left-0 h-full bg-[#089981]"
+                                    style={{ width: totalBidQty + totalAskQty === 0 ? '50%' : `${(totalBidQty / (totalBidQty + totalAskQty)) * 100}%` }}
+                                ></div>
                             </div>
-                            {/* Active dot */}
-                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#fbbf24] rounded-full border-2 border-[var(--bg-secondary)] shadow-sm z-10"></div>
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold text-[var(--text-secondary)]">
-                            <span>349.25</span>
-                            <span>461.55</span>
-                        </div>
-                    </div>
-
-                    {/* Circuit Limit */}
-                    <div className="bg-[var(--bg-secondary)] rounded-lg p-4 border border-[var(--border-primary)]">
-                        <div className="text-center text-xs font-bold text-[var(--text-secondary)] mb-4">Circuit limit</div>
-                        <div className="relative h-2 bg-[var(--border-primary)] rounded-full mb-2">
-                            {/* Dots simulation */}
-                            <div className="flex justify-between absolute inset-0 items-center px-1">
-                                {[...Array(15)].map((_, i) => (
-                                    <div key={i} className={`w-1 h-1 rounded-full ${i < 8 ? 'bg-[#f23645]' : 'bg-[#089981]'}`}></div>
-                                ))}
+                            <div className="flex justify-between items-center px-1">
+                                <span className="text-[#089981] font-bold text-[13px]">{totalBidQty.toLocaleString('en-IN')}</span>
+                                <span className="text-[#868993] font-semibold text-[12px]">Total Quantity</span>
+                                <span className="text-[#f23645] font-bold text-[13px]">{totalAskQty.toLocaleString('en-IN')}</span>
                             </div>
-                            {/* Active dot */}
-                            <div className="absolute left-[40%] top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#fbbf24] rounded-full border-2 border-[var(--bg-secondary)] shadow-sm z-10"></div>
                         </div>
-                        <div className="flex justify-between text-[10px] font-bold text-[var(--text-secondary)]">
-                            <span>368.10</span>
-                            <span>449.80</span>
+
+                        {/* Detailed Stats Grid */}
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                            {/* Row 1 */}
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">Avg Price</span>
+                                <span className="font-bold text-white text-[12px]">{stats.avgPrice}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">Prev Close</span>
+                                <span className="font-bold text-white text-[12px]">{stats.prevClose || stats.close}</span>
+                            </div>
+
+                            {/* Row 2 */}
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">Volume</span>
+                                <span className="font-bold text-white text-[12px]">{stats.volume}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">OI</span>
+                                <span className="font-bold text-white text-[12px]">{stats.oi || "-"}</span>
+                            </div>
+
+                            {/* Row 3 */}
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">LTQ</span>
+                                <span className="font-bold text-white text-[12px]">{stats.ltq || "-"}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">LTT</span>
+                                <span className="font-bold text-white text-[12px] uppercase">{stats.ltt || "-"}</span>
+                            </div>
+
+                            {/* Row 4 */}
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">LCL</span>
+                                <span className="font-bold text-white text-[12px]">{stats.lcl}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-[#2a2e39] pb-3">
+                                <span className="text-[#868993] text-[12px]">UCL</span>
+                                <span className="font-bold text-white text-[12px]">{stats.ucl}</span>
+                            </div>
+
+                            {/* Row 5 */}
+                            <div className="flex justify-between items-center pb-2">
+                                <span className="text-[#868993] text-[12px]">52W High</span>
+                                <span className="font-bold text-white text-[12px]">{stats.high52}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2">
+                                <span className="text-[#868993] text-[12px]">52W Low</span>
+                                <span className="font-bold text-white text-[12px]">{stats.low52}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

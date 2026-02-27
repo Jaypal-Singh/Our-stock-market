@@ -138,7 +138,7 @@ function ChartSection() {
 
       {/* Mobile Header */}
       {isMobileView && (
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-main)] shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="text-[var(--text-secondary)]">
               <ArrowLeft size={24} />
@@ -185,7 +185,7 @@ function ChartSection() {
 
       {/* Upper Toolbar - Desktop Only */}
       {!isMobileView && (
-        <div className="flex items-center justify-between p-1 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center justify-between p-1 border-b border-[var(--border-primary)] bg-[var(--bg-main)]">
           <div className="flex items-center gap-3 px-2">
             {/* Desktop Interval Selector */}
             <div className="relative">
@@ -247,7 +247,7 @@ function ChartSection() {
 
 
       {!isMobileView && stock && (
-        <div className="flex items-center p-2 text-[12px] border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center p-2 text-[12px] border-b border-[var(--border-primary)] bg-[var(--bg-main)]">
           <span className="font-bold text-[var(--text-primary)] mr-2 uppercase">
             {stock.name} • {stock.exch_seg || stock.exchange}
           </span>
@@ -309,7 +309,7 @@ function ChartSection() {
 
       {/* Footer Info Bar */}
       {!isMobileView && (
-        <div className="flex items-center justify-between p-1 bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[10px] border-t border-[var(--border-primary)]">
+        <div className="flex items-center justify-between p-1 bg-[var(--bg-main)] text-[var(--text-muted)] text-[10px] border-t border-[var(--border-primary)]">
 
           <div className="flex gap-4 px-2 items-center">
 

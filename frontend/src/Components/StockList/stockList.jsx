@@ -12,6 +12,7 @@ import {
 import useAngelOneSocket from "../../Hooks/useAngelOneSocket";
 import BuyWindow from "../Buy&SellWindow/BuyWindow/BuyWindow";
 import SellWindow from "../Buy&SellWindow/SellWindow/SellWindow";
+import MarketDepthWindow from "../Buy&SellWindow/MarketDepthWindow/MarketDepthWindow";
 import SearchContainer from "./Search/SearchContainer";
 import StockDetailsOverlay from "./StockDetailsOverlay";
 import EmptyWatchlist from "../Common/EmptyWatchlist";
@@ -30,6 +31,7 @@ function StockList() {
     const [selectedStock, setSelectedStock] = useState(null);
     const [showBuyWindow, setShowBuyWindow] = useState(false);
     const [showSellWindow, setShowSellWindow] = useState(false);
+    const [showMarketDepthWindow, setShowMarketDepthWindow] = useState(false);
 
     // New Detail Window State
     const [showDetailsWindow, setShowDetailsWindow] = useState(false);
@@ -54,12 +56,21 @@ function StockList() {
         setSelectedStock(stock);
         setShowBuyWindow(true);
         setShowSellWindow(false);
+        setShowMarketDepthWindow(false);
     };
 
     const handleSellClick = (stock) => {
         setSelectedStock(stock);
         setShowSellWindow(true);
         setShowBuyWindow(false);
+        setShowMarketDepthWindow(false);
+    };
+
+    const handleMarketDepthClick = (stock) => {
+        setSelectedStock(stock);
+        setShowMarketDepthWindow(true);
+        setShowBuyWindow(false);
+        setShowSellWindow(false);
     };
 
     const handleStockSelect = (stock) => {
@@ -330,6 +341,17 @@ function StockList() {
                     onSwitchToBuy={() => handleBuyClick(selectedStock)}
                 />
             )}
+            {showMarketDepthWindow && selectedStock && (
+                <MarketDepthWindow
+                    uid={selectedStock.token}
+                    stockName={selectedStock.name || selectedStock.symbol}
+                    stockSymbol={selectedStock.symbol}
+                    stockPrice={parsePrice(selectedStock.price || selectedStock.ltp)}
+                    stockChange={parseFloat(selectedStock.change || 0)}
+                    stockChangePercent={parsePercent(selectedStock.changePercent || selectedStock.percent || 0)}
+                    onClose={() => setShowMarketDepthWindow(false)}
+                />
+            )}
 
             {/* Stock Details Overlay */}
             {showDetailsWindow && selectedDetailStock && (
@@ -452,6 +474,7 @@ function StockList() {
                                             position={index === 0 ? "bottom" : "top"}
                                             onBuy={() => handleBuyClick(stock)}
                                             onSell={() => handleSellClick(stock)}
+                                            onMarketDepth={() => handleMarketDepthClick(stock)}
                                             onDelete={() => handleRemoveStockFromWatchlist(stock)}
                                         />
                                     </div>

@@ -80,7 +80,7 @@ const TradingViewChart = ({ stock, interval = 'ONE_MINUTE', onCrosshairMove }) =
 
             const chartOptions = {
                 layout: {
-                    background: { type: ColorType.Solid, color: isDark ? '#131722' : '#ffffff' },
+                    background: { type: ColorType.Solid, color: isDark ? '#0b0e14' : '#f8fafc' },
                     textColor: isDark ? '#d1d4dc' : '#0f172a',
                 },
                 grid: {

@@ -112,15 +112,15 @@ function Activity({ stock }) {
           <p className="font-bold">{liveStock?.open || "--"}</p>
         </div>
         <div>
-          <p className="text-[11px] text-[#868993]">High</p>
+          <p className="text-[11px] text-[var(--text-muted)]">High</p>
           <p className="font-bold text-[#089981]">{liveStock?.high || "--"}</p>
         </div>
         <div>
-          <p className="text-[11px] text-[#868993]">Low</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Low</p>
           <p className="font-bold text-[#f23645]">{liveStock?.low || "--"}</p>
         </div>
         <div>
-          <p className="text-[11px] text-[#868993]">Close</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Close</p>
           <p className="font-bold text-[var(--text-primary)]">{liveStock?.close || "--"}</p>
         </div>
       </div>

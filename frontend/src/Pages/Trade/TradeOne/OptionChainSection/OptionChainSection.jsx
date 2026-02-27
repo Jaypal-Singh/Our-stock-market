@@ -230,7 +230,7 @@ function OptionChain() {
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
   const ColHeader = ({ label, cls = "" }) => (
-    <th className={`p-2 font-medium bg-[#14151a] min-w-[70px] whitespace-nowrap ${cls}`}>{label}</th>
+    <th className={`p-2 font-medium bg-[var(--bg-main)] min-w-[70px] whitespace-nowrap ${cls}`}>{label}</th>
   );
 
   // ─── Actions ──────────────────────────────────────────────────────────────
@@ -285,7 +285,7 @@ function OptionChain() {
   const ActionTooltip = ({ optRaw, optLive }) => {
     if (!optRaw?.token) return null;
     return (
-      <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-1 bg-[#1e222d] border border-[#2a2e39] rounded px-1 py-1 shadow-lg z-20">
+      <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-1 py-1 shadow-lg z-20">
         <button
           onClick={(e) => { e.stopPropagation(); handleAction('buy', optRaw, optLive); }}
           className="bg-[#089981]/10 text-[#089981] hover:bg-[#089981] hover:text-white px-2 py-0.5 rounded text-[10px] font-bold transition-colors">
@@ -298,12 +298,12 @@ function OptionChain() {
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleAction('chart', optRaw, optLive); }}
-          className="text-[#868993] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Chart">
+          className="text-[var(--text-muted)] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Chart">
           <BarChart2 size={12} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleAction('watchlist', optRaw, optLive); }}
-          className="text-[#868993] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Add to Watchlist">
+          className="text-[var(--text-muted)] hover:text-white px-1.5 py-0.5 rounded transition-colors" title="Add to Watchlist">
           <Plus size={12} />
         </button>
       </div>
@@ -315,7 +315,7 @@ function OptionChain() {
 
   return (
     <div
-      className={`bg-[#14151a] text-[#b2b5be] font-sans ${isMobileView ? "h-full flex flex-col" : "p-4 min-h-full"
+      className={`bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans ${isMobileView ? "h-full flex flex-col" : "p-4 min-h-full"
         } relative`}
     >
       {/* ── Overlays ── */}
@@ -352,9 +352,9 @@ function OptionChain() {
 
       {/* ── Mobile Header ── */}
       {isMobileView && (
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] bg-[#1e222d] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] bg-[var(--bg-main)] shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="text-[#b2b5be]">
+            <button onClick={() => navigate(-1)} className="text-[var(--text-secondary)]">
               <ArrowLeft size={24} />
             </button>
             <div>
@@ -363,8 +363,8 @@ function OptionChain() {
               </h1>
               {stock && (
                 <div className="text-[10px] font-bold flex items-center gap-1">
-                  <span className="text-[#787b86]">{stock.exchange}</span>
-                  <span className="text-[#787b86]">•</span>
+                  <span className="text-[var(--text-muted)]">{stock.exchange}</span>
+                  <span className="text-[var(--text-muted)]">•</span>
                   <span className="text-[var(--text-primary)]">₹{stock.price}</span>
                   <span className={stock.isUp ? "text-[#089981]" : "text-[#f23645]"}>
                     {stock.percent}%
@@ -381,13 +381,13 @@ function OptionChain() {
 
         {/* ── Toolbar ── */}
         <div
-          className={`flex flex-wrap items-center gap-2 mb-3 bg-[#14151a] ${isMobileView ? "p-4 pb-0" : ""}`}
+          className={`flex flex-wrap items-center gap-2 mb-3 bg-[var(--bg-main)] ${isMobileView ? "p-4 pb-0" : ""}`}
         >
           {/* Title */}
           {!isMobileView && (
             <h3 className="text-sm font-bold uppercase tracking-wide text-white">
               {underlyingName}
-              <span className="ml-2 px-1 text-[10px] bg-[#1e222d] text-[#787b86] border border-[#2a2e39] rounded">
+              <span className="ml-2 px-1 text-[10px] bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border-primary)] rounded">
                 {stock?.exchange || "NSE"}
               </span>
               <span className="ml-2">
@@ -402,22 +402,22 @@ function OptionChain() {
           <div className="flex items-center gap-3 ml-auto text-[11px]">
             {/* Expiry Selector */}
             <div className="flex items-center gap-1 font-bold">
-              <span className="text-[#787b86]">Expiry:</span>
+              <span className="text-[var(--text-muted)]">Expiry:</span>
               <div className="relative">
                 <select
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  className="appearance-none bg-transparent border border-[#2a2e39] rounded px-2 pr-6 py-1 outline-none text-[#d1d4dc] cursor-pointer"
+                  className="appearance-none bg-transparent border border-[var(--border-primary)] rounded px-2 pr-6 py-1 outline-none text-[var(--text-primary)] cursor-pointer"
                 >
                   {expiries.map((ex) => (
-                    <option key={ex} value={ex} className="bg-[#1e222d]">
+                    <option key={ex} value={ex} className="bg-[var(--bg-secondary)]">
                       {formatExpiry(ex)}
                     </option>
                   ))}
                 </select>
                 <ChevronDown
                   size={12}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-[#868993] pointer-events-none"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
                 />
               </div>
             </div>
@@ -426,7 +426,7 @@ function OptionChain() {
             <button
               onClick={fetchGreeks}
               disabled={loading || cooldown > 0}
-              className="flex items-center gap-1 text-[11px] font-bold border border-[#2a2e39] text-[#2962ff] rounded px-3 py-1 hover:bg-[#2962ff] hover:text-white hover:border-[#2962ff] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 text-[11px] font-bold border border-[var(--border-primary)] text-[#2962ff] rounded px-3 py-1 hover:bg-[#2962ff] hover:text-white hover:border-[#2962ff] transition-colors disabled:opacity-40"
             >
               <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
               {loading ? "Loading…" : cooldown > 0 ? `Wait ${cooldown}s` : "Refresh"}
@@ -442,7 +442,7 @@ function OptionChain() {
             <Clock size={14} className="shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold">Market is closed.</span>{" "}
-              <span className="text-[#b2b5be]">Option Data is only available during market hours (Mon–Fri, 9:15 AM – 3:30 PM IST).</span>
+              <span className="text-[var(--text-secondary)]">Option Data is only available during market hours (Mon–Fri, 9:15 AM – 3:30 PM IST).</span>
             </div>
           </div>
         )}
@@ -450,7 +450,7 @@ function OptionChain() {
         {/* ── Error Banner ── */}
         {error && (
           <div
-            className={`flex items-start gap-2 bg-[#1e222d] border border-[#f23645]/40 rounded p-3 text-[11px] text-[#f23645] mb-3 ${isMobileView ? "mx-4" : ""}`}
+            className={`flex items-start gap-2 bg-[var(--bg-secondary)] border border-[#f23645]/40 rounded p-3 text-[11px] text-[#f23645] mb-3 ${isMobileView ? "mx-4" : ""}`}
           >
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <span>
@@ -469,7 +469,7 @@ function OptionChain() {
               .map((_, i) => (
                 <div
                   key={i}
-                  className="h-8 bg-[#1e222d] rounded animate-pulse"
+                  className="h-8 bg-[var(--bg-secondary)] rounded animate-pulse"
                 />
               ))}
           </div>
@@ -479,22 +479,22 @@ function OptionChain() {
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto overflow-y-auto customscrollbar flex-1">
             <table className="w-full text-[11px] text-center border-collapse min-w-[800px]">
-              <thead className="sticky top-0 z-10 bg-[#14151a]">
+              <thead className="sticky top-0 z-10 bg-[var(--bg-main)]">
                 {/* Group header */}
-                <tr className="border-b border-[#2a2e39] text-[#b2b5be]">
+                <tr className="border-b border-[var(--border-primary)] text-[var(--text-secondary)]">
                   <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">CALL</th>
-                  <th className="py-2 px-3 bg-[#1e222d] text-center border-x border-[#2a2e39] text-[10px] w-28 whitespace-nowrap text-[#787b86]">
+                  <th className="py-2 px-3 bg-[var(--bg-secondary)] text-center border-x border-[var(--border-primary)] text-[10px] w-28 whitespace-nowrap text-[var(--text-muted)]">
                     LTP & OI
                   </th>
                   <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">PUT</th>
                 </tr>
                 {/* Column headers */}
-                <tr className="text-[#787b86] border-b border-[#2a2e39] text-[10px] font-medium">
+                <tr className="text-[var(--text-muted)] border-b border-[var(--border-primary)] text-[10px] font-medium">
                   <ColHeader label="Volume" cls="text-left" />
                   <ColHeader label="OI Chng.(Chng%)" cls="text-right" />
                   <ColHeader label="OI" cls="text-right" />
                   <ColHeader label="LTP (LTP Chng%)" cls="text-right" />
-                  <th className="p-2 bg-[#1e222d] text-[var(--text-primary)] border-x border-[#2a2e39] font-medium">Strike</th>
+                  <th className="p-2 bg-[var(--bg-secondary)] text-[var(--text-primary)] border-x border-[var(--border-primary)] font-medium">Strike</th>
                   <ColHeader label="LTP (LTP Chng%)" cls="text-left" />
                   <ColHeader label="OI" cls="text-left" />
                   <ColHeader label="OI Chng.(Chng%)" cls="text-left" />
@@ -543,7 +543,7 @@ function OptionChain() {
                       {isAtm && (
                         <tr>
                           <td colSpan="9" className="p-0 h-[2px] bg-[#f23645] relative">
-                            <div className="absolute top-[-8px] left-1/2 -translate-x-1/2 bg-[#1e222d] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10 w-auto text-center min-w-[50px]">
+                            <div className="absolute top-[-8px] left-1/2 -translate-x-1/2 bg-[var(--bg-secondary)] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10 w-auto text-center min-w-[50px]">
                               {Number(currentSpotPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </td>
@@ -551,17 +551,17 @@ function OptionChain() {
                       )}
 
                       <tr
-                        className="border-b border-[#2a2e39] hover:bg-[#1a1c24] transition-colors leading-5 group"
+                        className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-card)] transition-colors leading-5 group"
                         onMouseLeave={() => setHoveredSide(null)}
                       >
                         {/* ──────────────── CALL Side ──────────────── */}
                         <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'CE' })}>
                           <div className="flex w-full h-full items-center">
-                            <div className="flex-1 p-2 text-left text-[#b2b5be] pl-4">{formatVol(ceVolume)}</div>
-                            <div className="flex-1 p-2 text-right text-[#b2b5be]">—</div>
+                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)] pl-4">{formatVol(ceVolume)}</div>
+                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)]">—</div>
                             {/* Live OI data or fallback */}
-                            <div className="flex-1 p-2 text-right text-[#b2b5be]">{ceLiveData?.oi ? Number(ceLiveData.oi).toLocaleString('en-IN') : (ce.oi || "—")}</div>
-                            <div className={`flex-1 p-2 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[#b2b5be]'}`}>
+                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)]">{ceLiveData?.oi ? Number(ceLiveData.oi).toLocaleString('en-IN') : (ce.oi || "—")}</div>
+                            <div className={`flex-1 p-2 text-right font-medium pr-4 ${ceChangePercent > 0 ? 'text-[#089981]' : ceChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
                               {ceLtp !== "—" ? `₹${ceLtp}` : "—"}
                               {ceChangePercent !== 0 && (
                                 <span className="text-[10px] ml-1 opacity-80">
@@ -574,14 +574,14 @@ function OptionChain() {
                         </td>
 
                         {/* ──────────────── Strike ──────────────── */}
-                        <td className={`p-2 bg-[#1e222d] group-hover:bg-[#262b36] font-bold text-[12px] border-x border-[#2a2e39] whitespace-nowrap text-center ${isAtm ? 'text-[#d1d4dc]' : 'text-[#d1d4dc]'}`}>
+                        <td className={`p-2 bg-[var(--bg-secondary)] group-hover:bg-[var(--bg-card)] font-bold text-[12px] border-x border-[var(--border-primary)] whitespace-nowrap text-center ${isAtm ? 'text-[var(--text-primary)]' : 'text-[var(--text-primary)]'}`}>
                           {Number(row.strikePrice).toLocaleString("en-IN")}
                         </td>
 
                         {/* ──────────────── PUT Side ──────────────── */}
                         <td colSpan={4} className="p-0 relative" onMouseEnter={() => setHoveredSide({ index: i, side: 'PE' })}>
                           <div className="flex w-full h-full items-center">
-                            <div className={`flex-1 p-2 text-left font-medium pl-4 ${peChangePercent > 0 ? 'text-[#089981]' : peChangePercent < 0 ? 'text-[#f23645]' : 'text-[#b2b5be]'}`}>
+                            <div className={`flex-1 p-2 text-left font-medium pl-4 ${peChangePercent > 0 ? 'text-[#089981]' : peChangePercent < 0 ? 'text-[#f23645]' : 'text-[var(--text-secondary)]'}`}>
                               {peLtp !== "—" ? `₹${peLtp}` : "—"}
                               {peChangePercent !== 0 && (
                                 <span className="text-[10px] ml-1 opacity-80">
@@ -589,9 +589,9 @@ function OptionChain() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 p-2 text-left text-[#b2b5be]">{peLiveData?.oi ? Number(peLiveData.oi).toLocaleString('en-IN') : (pe.oi || "—")}</div>
-                            <div className="flex-1 p-2 text-left text-[#b2b5be]">—</div>
-                            <div className="flex-1 p-2 text-right text-[#b2b5be] pr-4">{formatVol(peVolume)}</div>
+                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)]">{peLiveData?.oi ? Number(peLiveData.oi).toLocaleString('en-IN') : (pe.oi || "—")}</div>
+                            <div className="flex-1 p-2 text-left text-[var(--text-secondary)]">—</div>
+                            <div className="flex-1 p-2 text-right text-[var(--text-secondary)] pr-4">{formatVol(peVolume)}</div>
                           </div>
                           {hoveredSide?.index === i && hoveredSide?.side === 'PE' && <ActionTooltip optRaw={pe} optLive={peLiveData} />}
                         </td>
