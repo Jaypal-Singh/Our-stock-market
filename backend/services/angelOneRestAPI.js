@@ -105,7 +105,7 @@ class AngelOneRestAPI {
         try {
             const quotes = [];
             const apiUrl = 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/';
-            
+
             // Angel One restricts maximum 50 tokens per request
             const CHUNK_SIZE = 50;
             const chunks = [];
@@ -141,13 +141,13 @@ class AngelOneRestAPI {
 
                     if (!response.ok) {
                         const errorText = await response.text();
-                        logger.error(`API HTTP Error ${response.status} for ${exchSeg} (Batch ${i+1}):`, errorText);
+                        logger.error(`API HTTP Error ${response.status} for ${exchSeg} (Batch ${i + 1}):`, errorText);
                         continue;
                     }
 
                     const responseText = await response.text();
                     if (!responseText) {
-                        logger.error(`API Error for ${exchSeg} (Batch ${i+1}): Empty response body`);
+                        logger.error(`API Error for ${exchSeg} (Batch ${i + 1}): Empty response body`);
                         continue;
                     }
 
@@ -155,7 +155,7 @@ class AngelOneRestAPI {
                     try {
                         result = JSON.parse(responseText);
                     } catch (e) {
-                        logger.error(`API JSON Parse Error for ${exchSeg} (Batch ${i+1}):`, responseText.substring(0, 200));
+                        logger.error(`API JSON Parse Error for ${exchSeg} (Batch ${i + 1}):`, responseText.substring(0, 200));
                         continue;
                     }
 
@@ -182,11 +182,11 @@ class AngelOneRestAPI {
                             }
                         });
                     } else {
-                        logger.error(`API Error for ${exchSeg} (Batch ${i+1}):`, JSON.stringify(result));
+                        logger.error(`API Error for ${exchSeg} (Batch ${i + 1}):`, JSON.stringify(result));
                     }
 
                 } catch (batchError) {
-                    logger.error(`Batch ${i+1} Network/Parsing Error for ${exchSeg}:`, batchError.message);
+                    logger.error(`Batch ${i + 1} Network/Parsing Error for ${exchSeg}:`, batchError.message);
                 }
             }
 
@@ -227,6 +227,61 @@ class AngelOneRestAPI {
     }
 
     /**
+     * Get FULL market depth quote
+     * @param {string} token - Stock token
+     * @param {string} exchSeg - Exchange segment
+     */
+    async getMarketDepth(token, exchSeg = 'NSE') {
+        if (!this.isInitialized) {
+            throw new Error('REST API not initialized');
+        }
+
+        const apiUrl = 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/';
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.credentials.jwtToken}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-UserType': 'USER',
+                    'X-SourceID': 'WEB',
+                    'X-ClientLocalIP': '127.0.0.1',
+                    'X-ClientPublicIP': '127.0.0.1',
+                    'X-MACAddress': 'MAC_ADDRESS',
+                    'X-PrivateKey': this.credentials.apiKey
+                },
+                body: JSON.stringify({
+                    mode: 'FULL',
+                    exchangeTokens: {
+                        [exchSeg]: [token]
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                logger.error(`API HTTP Error ${response.status} for Market Depth:`, errorText);
+                return null;
+            }
+
+            const result = await response.json();
+
+            if (result.status && result.data && result.data.fetched && result.data.fetched.length > 0) {
+                return result.data.fetched[0];
+            } else {
+                logger.warn('No depth data returned for token:', token);
+                return null;
+            }
+
+        } catch (error) {
+            logger.error(`Market Depth fetch failed for token ${token}:`, error);
+            return null;
+        }
+    }
+
+    /**
      * Process the candle data request queue sequentially to respect rate limits
      */
     async processCandleQueue() {
@@ -256,11 +311,11 @@ class AngelOneRestAPI {
             } catch (error) {
                 // Check if it's a rate limit error (Too Many Requests / 429) or other retryable error
                 const isRateLimitError = error?.message?.includes('Too Many Requests') || error?.message?.includes('429');
-                
+
                 if (isRateLimitError && request.retries < this.MAX_RETRIES) {
                     logger.warn(`Rate limit hit for ${request.params.symboltoken}. Retrying (${request.retries + 1}/${this.MAX_RETRIES})...`);
                     request.retries++;
-                    
+
                     // We DO NOT shift from the queue. We wait longer and try again.
                     await new Promise(resolve => setTimeout(resolve, this.CANDLE_REQUEST_DELAY_MS * 3)); // Backoff longer
                     continue; // Re-evaluate the while loop (same request)

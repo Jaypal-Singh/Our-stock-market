@@ -323,6 +323,54 @@ export const getStockQuotes = async (req, res) => {
 };
 
 /**
+ * Get market depth for a single instrument
+ */
+export const getMarketDepth = async (req, res) => {
+    try {
+        const { token, exch_seg } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token is required'
+            });
+        }
+
+        const exchange = exch_seg || 'NSE';
+
+        // Get credentials
+        const credentials = await getSessionCredentials();
+
+        // Initialize/Update REST API with fresh credentials
+        const restAPI = (await import('../services/angelOneRestAPI.js')).default;
+        await restAPI.initialize(credentials);
+
+        // Fetch market depth
+        const depthData = await restAPI.getMarketDepth(token, exchange);
+
+        if (!depthData) {
+            return res.status(404).json({
+                success: false,
+                message: 'Market depth data not found for this token'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: depthData
+        });
+
+    } catch (error) {
+        console.error('Error fetching market depth:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch market depth',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Search instruments by name or symbol
  * GET /api/angel/search
  */
@@ -357,12 +405,12 @@ export const searchInstruments = async (req, res) => {
                 if (type === 'OPTSTK' || type === 'OPTIDX') return 3;
                 return 4;
             };
-            
+
             const rankA = getRank(a.instrumenttype);
             const rankB = getRank(b.instrumenttype);
-            
+
             if (rankA !== rankB) return rankA - rankB;
-            
+
             // If both are options, sort them by Expiry and then Strike string length as rough proxy
             if (a.expiry && b.expiry) {
                 // E.g. 24FEB2026 -> Date parsing. To keep it fast, just locale compare.

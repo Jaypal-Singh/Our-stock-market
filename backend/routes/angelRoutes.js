@@ -4,7 +4,8 @@ import {
     getStockQuotes,
     searchInstruments,
     loginAngelOne,
-    getStoredTokens
+    getStoredTokens,
+    getMarketDepth
 } from '../controllers/angelController.js';
 
 const router = express.Router();
@@ -23,6 +24,9 @@ router.post('/quotes', getStockQuotes);
 
 // Search instruments
 router.get('/search', searchInstruments);
+
+// Get Market Depth
+router.post('/market-depth', getMarketDepth);
 
 export default router;
 

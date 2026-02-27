@@ -12,19 +12,19 @@ function PerformanceOverview() {
           <p className="text-[#f23645] text-xs font-bold">Very Negative</p>
         </div>
         <div>
-          <p className="text-[10px] text-[#868993]">Long Term</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Long Term</p>
           <p className="text-[#f23645] text-xs font-bold">Very Negative</p>
         </div>
         <div>
-          <p className="text-[10px] text-[#868993]">Market Cap</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Market Cap</p>
           <p className="text-xs font-bold">Rs 4,170 Cr</p>
         </div>
         <div>
-          <p className="text-[10px] text-[#868993]">1 year Return</p>
+          <p className="text-[10px] text-[var(--text-muted)]">1 year Return</p>
           <p className="text-[#f23645] text-xs font-bold">-26.15%</p>
         </div>
         <div>
-          <p className="text-[10px] text-[#868993]">Sector Return</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Sector Return</p>
           <p className="text-[#089981] text-xs font-bold">7.92%</p>
         </div>
       </div>

@@ -48,7 +48,7 @@
 
 // export default TradeOne;
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom"; // Import useLocation
 import ChartSection from "./ChartsSection/ChartSection";
 import OverviewSection from "./OverviewSection/OverviewSection";
@@ -57,12 +57,19 @@ import OptionChainSection from "./OptionChainSection/OptionChainSection";
 function TradeOne() {
   const location = useLocation(); // Get location
   const stock = location.state?.stock; // Extract stock
-  const [activeTab, setActiveTab] = useState("chart");
+  const initialTab = location.state?.initialTab || "chart";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (location.state?.initialTab) {
+      setActiveTab(location.state.initialTab);
+    }
+  }, [location.state?.initialTab]);
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-main)] border-l border-[var(--border-primary)]">
       {/* Navigation Tabs */}
-      <div className="flex bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-6 h-12">
+      <div className="flex bg-[var(--bg-main)] border-b border-[var(--border-primary)] px-6 h-12">
         <div className="flex items-center gap-6 h-full">
           <button
             onClick={() => setActiveTab("chart")}
