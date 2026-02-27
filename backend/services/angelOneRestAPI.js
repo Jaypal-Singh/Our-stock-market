@@ -176,7 +176,9 @@ class AngelOneRestAPI {
                                     high: stockData.high,
                                     low: stockData.low,
                                     close: stockData.close,
-                                    volume: stockData.volume || 0,
+                                    volume: stockData.tradeVolume || stockData.volume || 0,
+                                    oi: stockData.opnInterest || stockData.openInterest || 0,
+                                    oiChange: stockData.netchangeInOI || stockData.netChangeinOpenInterest || 0,
                                     timestamp: Date.now()
                                 });
                             }

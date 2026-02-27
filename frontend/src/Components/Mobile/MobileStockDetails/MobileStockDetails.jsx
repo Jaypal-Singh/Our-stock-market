@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Star, BarChart2, Info, ArrowUpRight, ArrowDownRight, Link, CandlestickChart, AlignLeft, Maximize2 } from 'lucide-react';
+import { useToast } from '../../../context/ToastContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MarketDepthBottomSheet from './MarketDepthBottomSheet/MarketDepthBottomSheet';
 import MarketIndicesStrip from '../../Common/MarketIndicesStrip';
@@ -21,6 +22,48 @@ const MobileStockDetails = () => {
     const [timeRange, setTimeRange] = useState('1m');
     const [activeRatioPage, setActiveRatioPage] = useState(0);
     const [isMarketDepthOpen, setIsMarketDepthOpen] = useState(false);
+
+    const { showToast } = useToast();
+    const [allWatchlists, setAllWatchlists] = useState([]);
+    const [showWatchlistPicker, setShowWatchlistPicker] = useState(false);
+
+    useEffect(() => {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        if (!userInfo?.token) return;
+        fetch('/api/watchlist/getAllWatchlists', { headers: { Authorization: `Bearer ${userInfo.token}` } })
+            .then(r => r.json())
+            .then(data => { if (Array.isArray(data)) setAllWatchlists(data); })
+            .catch(() => { });
+    }, []);
+
+    // Check if current stock exists in any watchlist
+    const isStarred = allWatchlists.some(wl =>
+        wl.stocks?.some(s => s.token === stock.token)
+    );
+
+    const handleAddToWatchlist = (watchlistName) => {
+        setShowWatchlistPicker(false);
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        const authToken = userInfo?.token;
+        if (!authToken) { showToast('Please login first', false); return; }
+
+        fetch('/api/watchlist/addByToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ token: stock.token, watchlistName })
+        }).then(r => r.json()).then(res => {
+            if (res.success) {
+                showToast(`✓ ${stock.name || stock.symbol} added to "${watchlistName}"`);
+                // Update local state so star becomes filled immediately
+                setAllWatchlists(prev => prev.map(wl =>
+                    wl.name === watchlistName ? { ...wl, stocks: [{ token: stock.token }, ...(wl.stocks || [])] } : wl
+                ));
+                window.dispatchEvent(new CustomEvent('watchlist-updated', { detail: { watchlistName } }));
+            } else {
+                showToast(res.message || 'Already in watchlist', false);
+            }
+        }).catch(e => { console.error(e); showToast('Failed to add to watchlist', false); });
+    };
 
     const marketStats = [
         { label: "Market Cap", value: "Rs 2,56,123 Cr" },
@@ -70,8 +113,11 @@ const MobileStockDetails = () => {
                         <p className="text-[var(--text-muted)] text-[10px] font-bold uppercase">{stock.exchange}</p>
                     </div>
                 </div>
-                <button className="text-[var(--text-muted)]">
-                    <Star size={20} />
+                <button
+                    onClick={() => setShowWatchlistPicker(true)}
+                    className="transition-colors"
+                >
+                    <Star size={20} className={isStarred ? "text-[#f0b90b] fill-[#f0b90b]" : "text-[var(--text-muted)]"} />
                 </button>
             </div>
 
@@ -218,6 +264,41 @@ const MobileStockDetails = () => {
                 onClose={() => setIsMarketDepthOpen(false)}
                 stock={stock}
             />
+
+            {/* ── Watchlist Picker Bottom Sheet ── */}
+            {showWatchlistPicker && (
+                <div className="fixed inset-0 z-[9999] flex flex-col justify-end">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowWatchlistPicker(false)}></div>
+                    <div className="relative bg-[var(--bg-secondary)] w-full rounded-t-2xl p-5 border-t border-[var(--border-primary)] shadow-2xl animate-slide-up pb-8">
+                        <div className="w-12 h-1.5 bg-[var(--border-primary)] rounded-full mx-auto mb-4"></div>
+                        <h3 className="text-[var(--text-primary)] font-bold text-lg mb-4 text-center">Add to Watchlist</h3>
+
+                        {allWatchlists.length === 0 ? (
+                            <div className="text-center text-[var(--text-muted)] py-6 text-sm">No watchlists found. Please create one first on the Watchlist tab.</div>
+                        ) : (
+                            <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto customscrollbar mb-2 px-1">
+                                {allWatchlists.map(wl => {
+                                    const inList = wl.stocks?.some(s => s.token === stock.token);
+                                    return (
+                                        <button
+                                            key={wl._id}
+                                            onClick={() => handleAddToWatchlist(wl.name)}
+                                            disabled={inList}
+                                            className={`flex items-center justify-between text-left text-sm px-4 py-3.5 rounded-xl border ${inList ? 'border-[var(--border-primary)] bg-[var(--bg-main)] opacity-60' : 'border-transparent bg-[var(--bg-card)] hover:border-[var(--accent-primary)] text-[var(--text-secondary)]'} transition-all`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-lg">📋</span>
+                                                <span className="font-semibold">{wl.name}</span>
+                                            </div>
+                                            {inList && <span className="text-[10px] text-[var(--accent-primary)] font-bold px-2 py-0.5 bg-[var(--accent-primary)]/10 rounded-full">ADDED</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -142,6 +142,22 @@ const MobileWatchlistPage = () => {
         });
     }, [stocks]);
 
+    // Listen for watchlist-updated event from OptionChain (or anywhere)
+    useEffect(() => {
+        const handleWatchlistUpdated = async (e) => {
+            const updatedWatchlistName = e.detail?.watchlistName;
+            const currentName = activeWatchlist?.name || activeWatchlist;
+            // Reload if the updated watchlist matches active one
+            if (!updatedWatchlistName || updatedWatchlistName === currentName) {
+                if (typeof currentName === 'string') {
+                    await fetchWatchlistStocks(currentName);
+                }
+            }
+        };
+        window.addEventListener('watchlist-updated', handleWatchlistUpdated);
+        return () => window.removeEventListener('watchlist-updated', handleWatchlistUpdated);
+    }, [activeWatchlist]);
+
     const handleCreateWatchlist = async (name) => {
         try {
             const config = getAuthConfig();

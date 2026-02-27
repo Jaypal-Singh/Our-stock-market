@@ -35,6 +35,8 @@ export function parseTickData(tickData) {
                     low: (parseFloat(data.low_price_day) || 0) / 100,
                     close: (parseFloat(data.close_price) || 0) / 100,
                     volume: parseInt(data.vol_traded) || 0,
+                    oi: parseInt(data.open_interest) || 0,
+                    oiChange: parseInt(data.change_in_open_interest) || 0,
                     timestamp: Date.now()
                 };
 
@@ -59,6 +61,8 @@ export function parseTickData(tickData) {
                     low: (parseFloat(tickData.low_price_day) || 0) / 100,
                     close: (parseFloat(tickData.close_price) || 0) / 100,
                     volume: parseInt(tickData.vol_traded) || 0,
+                    oi: parseInt(tickData.open_interest) || 0,
+                    oiChange: parseInt(tickData.change_in_open_interest) || 0,
                     timestamp: Date.now()
                 };
 
@@ -219,7 +223,9 @@ export function updateStocksWithTicks(prevStocks, ticks) {
                 high: parsedTick.high || stock.high || currentPrice,
                 low: parsedTick.low || stock.low || currentPrice,
                 close: stock.close || parsedTick.close || currentPrice, // Set baseline on first update
-                volume: parsedTick.volume || 0,
+                volume: parsedTick.volume || stock.volume || 0,
+                oi: parsedTick.oi || stock.oi || 0,
+                oiChange: parsedTick.oiChange !== undefined ? parsedTick.oiChange : (stock.oiChange || 0),
                 change,
                 changePercent: parseFloat(changePercent.toFixed(2)),
                 percent: `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
