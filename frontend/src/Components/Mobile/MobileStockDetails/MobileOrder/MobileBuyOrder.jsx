@@ -28,6 +28,9 @@ const MobileBuyOrder = () => {
     const [orderType, setOrderType] = useState('Market');
     const [isLoading, setIsLoading] = useState(false);
     const [userBalance, setUserBalance] = useState(0);
+    const [isSlTargetChecked, setIsSlTargetChecked] = useState(false);
+    const [stopLoss, setStopLoss] = useState("");
+    const [target, setTarget] = useState("");
 
     // Fetch user balance
     useEffect(() => {
@@ -123,7 +126,9 @@ const MobileBuyOrder = () => {
                 price: orderType === 'Market' ? 0 : price,
                 marketPrice: currentLivePrice, // Capture current live market price
                 quantity: quantity,
-                userId: userId
+                userId: userId,
+                stoploss: isSlTargetChecked && stopLoss ? Number(stopLoss) : undefined,
+                squareoff: isSlTargetChecked && target ? Number(target) : undefined
             };
 
             const response = await placeOrder(orderData);
@@ -272,6 +277,49 @@ const MobileBuyOrder = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Additional Options */}
+                <div className="flex items-center gap-2 mb-6">
+                    <button
+                        onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                        className={`flex items-center justify-center h-4 w-4 rounded border ${isSlTargetChecked ? "bg-[#089981] border-[#089981]" : "border-[var(--border-primary)]"} text-white hover:border-[#089981] transition-colors`}
+                    >
+                        {isSlTargetChecked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                    </button>
+                    <span
+                        onClick={() => setIsSlTargetChecked(!isSlTargetChecked)}
+                        className="text-sm text-[#089981] cursor-pointer hover:underline select-none"
+                    >
+                        Set Stop Loss / Target
+                    </span>
+                    <Settings size={14} className="text-[var(--text-muted)]" />
+                </div>
+
+                {/* SL and Target Inputs */}
+                {isSlTargetChecked && (
+                    <div className="flex gap-4 mb-6">
+                        <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)]">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2 block">Stop Loss</label>
+                            <input
+                                type="number"
+                                placeholder="0.00"
+                                value={stopLoss}
+                                onChange={(e) => setStopLoss(e.target.value)}
+                                className="bg-transparent text-lg font-bold text-[var(--text-primary)] w-full outline-none"
+                            />
+                        </div>
+                        <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-lg border border-[var(--border-primary)]">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2 block">Target</label>
+                            <input
+                                type="number"
+                                placeholder="0.00"
+                                value={target}
+                                onChange={(e) => setTarget(e.target.value)}
+                                className="bg-transparent text-lg font-bold text-[var(--text-primary)] w-full outline-none"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Footer */}
@@ -291,7 +339,7 @@ const MobileBuyOrder = () => {
                     {isLoading ? 'Placing Order...' : 'Buy'}
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 
