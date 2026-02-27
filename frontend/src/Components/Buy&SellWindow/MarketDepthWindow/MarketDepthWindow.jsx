@@ -111,17 +111,7 @@ const MarketDepthWindow = ({
                 <div className="draggable-header cursor-move bg-[var(--bg-main)] p-2 border-b border-[var(--border-primary)] flex justify-between items-center rounded-t-lg">
                     <span className="text-sm font-semibold text-[var(--text-primary)]">Market Depth & Quote</span>
                     <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-[var(--bg-secondary)] px-2 py-1 rounded">
-                            <Search size={14} className="text-[var(--text-muted)] mr-1" />
-                            <input
-                                type="text"
-                                placeholder="Search"
-                                className="bg-transparent text-xs outline-none text-[var(--text-primary)] w-20"
-                            />
-                        </div>
-                        <button className="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-muted)] transition-colors">
-                            <Maximize2 size={14} />
-                        </button>
+
                         <button onClick={onClose} className="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
                             <X size={16} />
                         </button>
@@ -143,14 +133,7 @@ const MarketDepthWindow = ({
                                 </span>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button className="p-1.5 bg-[var(--bg-secondary)] rounded hover:bg-[var(--bg-main)] transition-colors text-[#e8b23c]">
-                                <Star size={16} fill="currentColor" />
-                            </button>
-                            <button className="p-1.5 bg-[var(--bg-secondary)] rounded hover:bg-[var(--bg-main)] transition-colors text-[var(--text-primary)]">
-                                <BarChart2 size={16} />
-                            </button>
-                        </div>
+
                     </div>
 
                     {/* Depth Table */}

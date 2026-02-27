@@ -112,14 +112,14 @@ const FundsBanner = () => {
                 <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
                     <button
                         onClick={() => setIsWithdrawFundsOpen(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#4d5162] text-[#6b82fe] bg-transparent text-xs font-semibold hover:border-[#6b82fe] transition-colors whitespace-nowrap"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#4d5162] text-[#6b82fe] bg-transparent text-xs font-semibold hover:border-[#6b82fe] transition-colors whitespace-nowrap cursor-pointer"
                     >
                         <Wallet size={14} className="stroke-2 opacity-80" />
                         WITHDRAW FUNDS
                     </button>
                     <button
                         onClick={() => setIsAddFundsOpen(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#6b82fe] text-white text-xs font-semibold hover:bg-[#5b72ee] transition-colors whitespace-nowrap"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#6b82fe] text-white text-xs font-semibold hover:bg-[#5b72ee] transition-colors whitespace-nowrap cursor-pointer"
                     >
                         <Wallet size={14} className="stroke-2 opacity-90" />
                         ADD FUNDS

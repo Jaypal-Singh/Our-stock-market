@@ -79,7 +79,7 @@ function Portfolio() {
                             className={`h-full text-sm font-bold border-b-2 transition-colors ${activeTab === tab
                                 ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]'
                                 : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                }`}
+                                } cursor-pointer`}
                             onClick={() => setActiveTab(tab)}
                         >
                             {tab}

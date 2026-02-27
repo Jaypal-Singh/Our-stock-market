@@ -148,20 +148,24 @@ const MarketDepthBottomSheet = ({ isOpen, onClose, stock }) => {
                     <div className="bg-[#131722] overflow-hidden text-[#d1d4dc] text-[11px] pb-2">
                         {/* Header */}
                         <div className="flex border-b border-[#2a2e39] font-semibold text-[10px] text-[#868993] bg-[#1c202b] px-4 py-3">
-                            <div className="w-[20%] text-left">Qty</div>
-                            <div className="w-[30%] text-right pr-4">Buy Price</div>
-                            <div className="w-[30%] text-left pl-4">Sell price</div>
-                            <div className="w-[20%] text-right">Qty</div>
+                            <div className="w-[15%] text-left">Qty</div>
+                            <div className="w-[15%] text-center">Orders</div>
+                            <div className="w-[20%] text-right pr-2">Buy Price</div>
+                            <div className="w-[20%] text-left pl-2">Sell Price</div>
+                            <div className="w-[15%] text-center">Orders</div>
+                            <div className="w-[15%] text-right">Qty</div>
                         </div>
 
                         {/* Rows */}
                         <div className="px-4 pb-2">
                             {bids.map((bid, i) => (
                                 <div key={i} className="flex border-b border-[#2a2e39] last:border-0 hover:bg-[#1e222d] py-3 items-center">
-                                    <div className="w-[20%] text-left text-[#d1d4dc] font-bold">{bid.qty > 0 ? bid.qty : "0"}</div>
-                                    <div className="w-[30%] text-right pr-4 text-[#089981] font-medium">{bid.price > 0 ? bid.price.toFixed(2) : "0.00"}</div>
-                                    <div className="w-[30%] text-left pl-4 text-[#f23645] font-medium">{asks[i]?.price > 0 ? asks[i].price.toFixed(2) : "0.00"}</div>
-                                    <div className="w-[20%] text-right text-[#d1d4dc] font-bold">{asks[i]?.qty > 0 ? asks[i].qty : "0"}</div>
+                                    <div className={`w-[15%] text-left font-bold ${bid.qty > 0 ? 'text-[#08a8e8]' : 'text-[#868993]'}`}>{bid.qty > 0 ? bid.qty : "0"}</div>
+                                    <div className="w-[15%] text-center text-[#d1d4dc]">{bid.orders > 0 ? bid.orders : "0"}</div>
+                                    <div className="w-[20%] text-right pr-2 font-medium text-[#089981]">{bid.price > 0 ? bid.price.toFixed(2) : "0.00"}</div>
+                                    <div className="w-[20%] text-left pl-2 font-medium text-[#f23645]">{asks[i]?.price > 0 ? asks[i].price.toFixed(2) : "0.00"}</div>
+                                    <div className="w-[15%] text-center text-[#d1d4dc]">{asks[i]?.orders > 0 ? asks[i].orders : "0"}</div>
+                                    <div className={`w-[15%] text-right font-bold ${asks[i]?.qty > 0 ? 'text-[#e8b23c]' : 'text-[#868993]'}`}>{asks[i]?.qty > 0 ? asks[i].qty : "0"}</div>
                                 </div>
                             ))}
                         </div>

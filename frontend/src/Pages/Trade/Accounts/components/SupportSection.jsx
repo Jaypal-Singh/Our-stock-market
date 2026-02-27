@@ -48,7 +48,7 @@ const SupportSection = () => {
                     <button
                         key={item.id}
                         onClick={() => setActiveItem(item.id)}
-                        className="w-full flex items-center justify-between p-5 hover:bg-[var(--bg-card)]/50 transition-all group"
+                        className="w-full flex items-center justify-between p-5 hover:bg-[var(--bg-card)]/50 transition-all group cursor-pointer"
                     >
                         <div className="flex items-center gap-4">
                             <div className={`p-2 rounded-lg bg-[var(--bg-main)] ${item.color} shadow-sm border border-[var(--border-primary)]`}>

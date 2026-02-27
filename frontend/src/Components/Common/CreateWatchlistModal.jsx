@@ -61,7 +61,7 @@ const CreateWatchlistModal = ({ isOpen, onClose, onCreate }) => {
                         <button
                             type="submit"
                             disabled={!name.trim()}
-                            className="w-full bg-[#2962ff] hover:bg-[#1e54eb] disabled:bg-[#2962ff]/50 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition-colors"
+                            className="w-full bg-[#2962ff] hover:bg-[#1e54eb] disabled:bg-[#2962ff]/50 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition-colors cursor-pointer"
                         >
                             CREATE
                         </button>
