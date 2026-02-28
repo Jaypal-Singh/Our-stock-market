@@ -19,6 +19,8 @@ const MobileStockDetails = () => {
         isUp: false // Based on screenshot red color
     };
 
+    const fromOptionChain = location.state?.fromOptionChain || false;
+
     const [timeRange, setTimeRange] = useState('1m');
     const [activeRatioPage, setActiveRatioPage] = useState(0);
     const [isMarketDepthOpen, setIsMarketDepthOpen] = useState(false);
@@ -41,28 +43,42 @@ const MobileStockDetails = () => {
         wl.stocks?.some(s => s.token === stock.token)
     );
 
-    const handleAddToWatchlist = (watchlistName) => {
+    const handleToggleWatchlist = (watchlistName, inList = false) => {
         setShowWatchlistPicker(false);
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
         const authToken = userInfo?.token;
         if (!authToken) { showToast('Please login first', false); return; }
 
-        fetch('/api/watchlist/addByToken', {
+        const endpoint = inList ? '/api/watchlist/removeByToken' : '/api/watchlist/addByToken';
+
+        // If removing from all (star click when already starred)
+        const body = { token: stock.token };
+        if (watchlistName !== 'ALL') body.watchlistName = watchlistName;
+
+        fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ token: stock.token, watchlistName })
+            body: JSON.stringify({ token: stock.token, watchlistName: watchlistName === 'ALL' ? undefined : watchlistName })
         }).then(r => r.json()).then(res => {
             if (res.success) {
-                showToast(`✓ ${stock.name || stock.symbol} added to "${watchlistName}"`);
-                // Update local state so star becomes filled immediately
-                setAllWatchlists(prev => prev.map(wl =>
-                    wl.name === watchlistName ? { ...wl, stocks: [{ token: stock.token }, ...(wl.stocks || [])] } : wl
-                ));
+                if (inList) {
+                    showToast(`✓ Removed from ${watchlistName === 'ALL' ? 'Watchlists' : watchlistName}`);
+                    setAllWatchlists(prev => prev.map(wl =>
+                        (watchlistName === 'ALL' || wl.name === watchlistName)
+                            ? { ...wl, stocks: (wl.stocks || []).filter(s => s.token !== stock.token) }
+                            : wl
+                    ));
+                } else {
+                    showToast(`✓ Added to "${watchlistName}"`);
+                    setAllWatchlists(prev => prev.map(wl =>
+                        wl.name === watchlistName ? { ...wl, stocks: [{ token: stock.token }, ...(wl.stocks || [])] } : wl
+                    ));
+                }
                 window.dispatchEvent(new CustomEvent('watchlist-updated', { detail: { watchlistName } }));
             } else {
-                showToast(res.message || 'Already in watchlist', false);
+                showToast(res.message || 'Action failed', false);
             }
-        }).catch(e => { console.error(e); showToast('Failed to add to watchlist', false); });
+        }).catch(e => { console.error(e); showToast('Request failed', false); });
     };
 
     const marketStats = [
@@ -114,7 +130,13 @@ const MobileStockDetails = () => {
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowWatchlistPicker(true)}
+                    onClick={() => {
+                        if (isStarred) {
+                            handleToggleWatchlist('ALL', true);
+                        } else {
+                            setShowWatchlistPicker(true);
+                        }
+                    }}
                     className="transition-colors"
                 >
                     <Star size={20} className={isStarred ? "text-[#f0b90b] fill-[#f0b90b]" : "text-[var(--text-muted)]"} />
@@ -137,12 +159,14 @@ const MobileStockDetails = () => {
                                 <span className="text-[var(--text-muted)] ml-1 font-medium">Today</span>
                             </div>
                         </div>
-                        <button
-                            onClick={() => navigate('/trade/option-chain', { state: { stock } })}
-                            className="flex items-center gap-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] px-3 py-1.5 rounded text-xs font-bold text-[var(--accent-primary)]"
-                        >
-                            <Link size={12} /> Option Chain
-                        </button>
+                        {!fromOptionChain && (
+                            <button
+                                onClick={() => navigate('/trade/option-chain', { state: { stock } })}
+                                className="flex items-center gap-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] px-3 py-1.5 rounded text-xs font-bold text-[var(--accent-primary)]"
+                            >
+                                <Link size={12} /> Option Chain
+                            </button>
+                        )}
                     </div>
 
                     {/* Real-time Chart Section */}
@@ -282,15 +306,14 @@ const MobileStockDetails = () => {
                                     return (
                                         <button
                                             key={wl._id}
-                                            onClick={() => handleAddToWatchlist(wl.name)}
-                                            disabled={inList}
-                                            className={`flex items-center justify-between text-left text-sm px-4 py-3.5 rounded-xl border ${inList ? 'border-[var(--border-primary)] bg-[var(--bg-main)] opacity-60' : 'border-transparent bg-[var(--bg-card)] hover:border-[var(--accent-primary)] text-[var(--text-secondary)]'} transition-all`}
+                                            onClick={() => handleToggleWatchlist(wl.name, inList)}
+                                            className={`flex items-center justify-between text-left text-sm px-4 py-3.5 rounded-xl border ${inList ? 'border-[var(--border-primary)] bg-[var(--bg-main)] hover:border-[#f23645] hover:text-[#f23645]' : 'border-transparent bg-[var(--bg-card)] hover:border-[var(--accent-primary)] text-[var(--text-secondary)]'} transition-all`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className="text-lg">📋</span>
                                                 <span className="font-semibold">{wl.name}</span>
                                             </div>
-                                            {inList && <span className="text-[10px] text-[var(--accent-primary)] font-bold px-2 py-0.5 bg-[var(--accent-primary)]/10 rounded-full">ADDED</span>}
+                                            {inList && <span className="text-[10px] text-[#f23645] font-bold px-2 py-0.5 border border-[#f23645] rounded-full">REMOVE</span>}
                                         </button>
                                     );
                                 })}

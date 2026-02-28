@@ -83,7 +83,11 @@ function OptionChain({ initialUnderlying }) {
   const [showSellWindow, setShowSellWindow] = useState(false);
   const [selectedStockForOrder, setSelectedStockForOrder] = useState(null);
 
+  // Hover / Actions
   const [hoveredSide, setHoveredSide] = useState(null); // { index: number, side: 'CE' | 'PE' }
+
+  // Auto-scroll ref
+  const atmRowRef = React.useRef(null);
 
   // Toast notification
   const [toast, setToast] = useState(null); // { msg, ok }
@@ -254,6 +258,16 @@ function OptionChain({ initialUnderlying }) {
   }, [loading, rows, optionTokens, liveOptionData, expiry, expiries, underlyingInfo]);
   */
 
+  // ─── Auto-scroll to ATM row ───
+  useEffect(() => {
+    if (!loading && rows.length > 0 && atmRowRef.current) {
+      // Use a small timeout to ensure rendering is complete before scrolling
+      setTimeout(() => {
+        atmRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [loading, rows, expiry]);
+
   // ─── Render helpers ─────────────────────────────────────────────────────────
   const ColHeader = ({ label, cls = "" }) => (
     <th className={`p-2 font-medium bg-[var(--bg-main)] min-w-[70px] whitespace-nowrap ${cls}`}>{label}</th>
@@ -324,26 +338,38 @@ function OptionChain({ initialUnderlying }) {
   const underlyingLive = underlyingInfo?.token ? liveOptionData.find(s => s.token === underlyingInfo.token) : null;
   const currentSpotPrice = underlyingLive?.ltp || stock?.price;
 
-  const addToWatchlist = (watchlistName) => {
+  const handleToggleWatchlist = (watchlistName, inList = false) => {
     const { optRaw, optLive } = watchlistPicker;
     setWatchlistPicker(null);
     const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
     const authToken = userInfo?.token;
     if (!authToken) { showToast('Please login first', false); return; }
+
+    const endpoint = inList ? '/api/watchlist/removeByToken' : '/api/watchlist/addByToken';
     const symbol = optRaw.symbol || '';
-    fetch('/api/watchlist/addByToken', {
+
+    fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
       body: JSON.stringify({ token: optRaw.token, watchlistName })
     }).then(r => r.json()).then(res => {
       if (res.success) {
-        showToast(`✓ ${symbol} added to "${watchlistName}"`);
-        // Tell StockList to refresh
+        if (inList) {
+          showToast(`✓ ${symbol} removed from "${watchlistName}"`);
+          setAllWatchlists(prev => prev.map(wl =>
+            wl.name === watchlistName ? { ...wl, stocks: (wl.stocks || []).filter(s => s.token !== optRaw.token) } : wl
+          ));
+        } else {
+          showToast(`✓ ${symbol} added to "${watchlistName}"`);
+          setAllWatchlists(prev => prev.map(wl =>
+            wl.name === watchlistName ? { ...wl, stocks: [{ token: optRaw.token }, ...(wl.stocks || [])] } : wl
+          ));
+        }
         window.dispatchEvent(new CustomEvent('watchlist-updated', { detail: { watchlistName } }));
       } else {
-        showToast(res.message || 'Already in watchlist', false);
+        showToast(res.message || 'Action failed', false);
       }
-    }).catch(e => { console.error(e); showToast('Failed to add to watchlist', false); });
+    }).catch(e => { console.error(e); showToast('Request failed', false); });
   };
 
   return (
@@ -360,15 +386,19 @@ function OptionChain({ initialUnderlying }) {
               <div className="text-[11px] text-[var(--text-muted)] py-2">No watchlists found. Please create one first.</div>
             ) : (
               <div className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto customscrollbar pr-2">
-                {allWatchlists.map(wl => (
-                  <button
-                    key={wl._id}
-                    onClick={() => addToWatchlist(wl.name)}
-                    className="text-left text-[12px] px-3 py-2 rounded hover:bg-[var(--accent-primary)] hover:text-white text-[var(--text-secondary)] transition-colors border border-transparent hover:border-[var(--accent-primary)]"
-                  >
-                    📋 {wl.name}
-                  </button>
-                ))}
+                {allWatchlists.map(wl => {
+                  const inList = wl.stocks?.some(s => s.token === watchlistPicker?.optRaw?.token);
+                  return (
+                    <button
+                      key={wl._id}
+                      onClick={() => handleToggleWatchlist(wl.name, inList)}
+                      className={`flex justify-between items-center text-left text-[12px] px-3 py-2 rounded transition-colors border ${inList ? 'border-[var(--border-primary)] hover:border-[#f23645] hover:text-[#f23645]' : 'border-transparent hover:border-[var(--accent-primary)] hover:bg-[var(--accent-primary)] hover:text-white'} text-[var(--text-secondary)]`}
+                    >
+                      <span className="truncate">📋 {wl.name}</span>
+                      {inList && <span className="text-[10px] font-bold opacity-80">REMOVE</span>}
+                    </button>
+                  );
+                })}
               </div>
             )}
             <button onClick={() => setWatchlistPicker(null)} className="mt-3 w-full text-[12px] font-medium text-[var(--text-muted)] hover:text-[#f23645] transition-colors py-2 border border-[var(--border-primary)] hover:border-[#f23645] rounded rounded-md">✕ Cancel</button>
@@ -528,15 +558,46 @@ function OptionChain({ initialUnderlying }) {
 
         {/* ── Loading Skeleton ── */}
         {loading && rows.length === 0 && (
-          <div className={`space-y-1 ${isMobileView ? "px-4" : ""}`}>
-            {Array(8)
-              .fill(null)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="h-8 bg-[var(--bg-secondary)] rounded animate-pulse"
-                />
-              ))}
+          <div className="overflow-x-auto customscrollbar flex-1 opacity-70 pointer-events-none">
+            <table className="w-full text-[13px] text-center border-collapse min-w-[800px]">
+              <thead className="bg-[var(--bg-main)]">
+                <tr className="border-b border-[var(--border-primary)] text-[var(--text-secondary)]">
+                  <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">CALL</th>
+                  <th className="py-2 px-3 bg-[var(--bg-secondary)] text-center border-x border-[var(--border-primary)] text-[10px] w-28 whitespace-nowrap text-[var(--text-muted)]">
+                    LTP & OI
+                  </th>
+                  <th colSpan="4" className="py-2 px-3 text-center tracking-widest font-bold">PUT</th>
+                </tr>
+                <tr className="text-[var(--text-muted)] border-b border-[var(--border-primary)] text-[10px] font-medium">
+                  <ColHeader label="Volume" cls="text-left" />
+                  <ColHeader label="OI Chng.(Chng%)" cls="text-right" />
+                  <ColHeader label="OI" cls="text-right" />
+                  <ColHeader label="LTP (LTP Chng%)" cls="text-right" />
+                  <th className="p-2 bg-[var(--bg-secondary)] text-[var(--text-primary)] border-x border-[var(--border-primary)] font-medium">Strike</th>
+                  <ColHeader label="LTP (LTP Chng%)" cls="text-left" />
+                  <ColHeader label="OI" cls="text-left" />
+                  <ColHeader label="OI Chng.(Chng%)" cls="text-left" />
+                  <ColHeader label="Volume" cls="text-right" />
+                </tr>
+              </thead>
+              <tbody>
+                {Array(12).fill(null).map((_, i) => (
+                  <tr key={i} className="border-b border-[var(--border-primary)]">
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-1/2"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-3/4 ml-auto"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-1/2 ml-auto"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-2/3 ml-auto"></div></td>
+                    <td className="p-3 bg-[var(--bg-secondary)] border-x border-[var(--border-primary)]">
+                      <div className="h-4 bg-[#2a2e39] rounded animate-pulse w-1/2 mx-auto"></div>
+                    </td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-2/3"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-1/2"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-3/4"></div></td>
+                    <td className="p-3"><div className="h-4 bg-[var(--bg-secondary)] rounded animate-pulse w-1/2 ml-auto"></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -621,7 +682,7 @@ function OptionChain({ initialUnderlying }) {
                   return (
                     <React.Fragment key={i}>
                       {isAtm && (
-                        <tr>
+                        <tr ref={atmRowRef}>
                           <td colSpan="9" className="p-0 h-[3px] bg-[#f23645] relative">
                             <div className="absolute top-[-8px] left-1/2 -translate-x-1/2 bg-[var(--bg-secondary)] border border-[#f23645] text-[#f23645] font-bold text-[9px] px-2 py-0.5 rounded-sm z-10 w-auto text-center min-w-[50px]">
                               {Number(currentSpotPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -637,7 +698,7 @@ function OptionChain({ initialUnderlying }) {
                         {/* ──────────────── CALL Side ──────────────── */}
                         <td colSpan={4} className="p-0 relative" onMouseEnter={() => !isMobileView && setHoveredSide({ index: i, side: 'CE' })} onClick={() => {
                           if (isMobileView && ce.token) {
-                            navigate('/trade/stock-details', { state: { stock: { token: ce.token, name: ce.symbol, symbol: ce.symbol, exch_seg: ce.exch_seg, lotsize: ce.lotsize, price: ceLiveData?.ltp || 0, ltp: ceLiveData?.ltp || 0, change: ceLiveData?.change || 0, percent: ceLiveData?.changePercent || 0, isUp: ceLiveData?.changePercent >= 0 } } });
+                            navigate('/trade/stock-details', { state: { stock: { token: ce.token, name: ce.symbol, symbol: ce.symbol, exch_seg: ce.exch_seg, lotsize: ce.lotsize, price: ceLiveData?.ltp || 0, ltp: ceLiveData?.ltp || 0, change: ceLiveData?.change || 0, percent: ceLiveData?.changePercent || 0, isUp: ceLiveData?.changePercent >= 0 }, fromOptionChain: true } });
                           }
                         }}>
                           <div className="flex w-full h-full items-center">
@@ -667,7 +728,7 @@ function OptionChain({ initialUnderlying }) {
                         {/* ──────────────── PUT Side ──────────────── */}
                         <td colSpan={4} className="p-0 relative" onMouseEnter={() => !isMobileView && setHoveredSide({ index: i, side: 'PE' })} onClick={() => {
                           if (isMobileView && pe.token) {
-                            navigate('/trade/stock-details', { state: { stock: { token: pe.token, name: pe.symbol, symbol: pe.symbol, exch_seg: pe.exch_seg, lotsize: pe.lotsize, price: peLiveData?.ltp || 0, ltp: peLiveData?.ltp || 0, change: peLiveData?.change || 0, percent: peLiveData?.changePercent || 0, isUp: peLiveData?.changePercent >= 0 } } });
+                            navigate('/trade/stock-details', { state: { stock: { token: pe.token, name: pe.symbol, symbol: pe.symbol, exch_seg: pe.exch_seg, lotsize: pe.lotsize, price: peLiveData?.ltp || 0, ltp: peLiveData?.ltp || 0, change: peLiveData?.change || 0, percent: peLiveData?.changePercent || 0, isUp: peLiveData?.changePercent >= 0 }, fromOptionChain: true } });
                           }
                         }}>
                           <div className="flex w-full h-full items-center">

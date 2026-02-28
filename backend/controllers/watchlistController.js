@@ -19,11 +19,11 @@ export const createWatchlist = async (req, res) => {
     }
 };
 
-// Get all watchlists (names and ids mainly, or full objects)
+// Get all watchlists (names and ids mainly, full objects populated)
 export const getAllWatchlists = async (req, res) => {
     try {
         const userId = req.user._id;
-        const watchlists = await Watchlist.find({ user: userId }).select('name _id stocks'); // Select minimal if needed, or all
+        const watchlists = await Watchlist.find({ user: userId }).populate('stocks'); 
         res.status(200).json(watchlists);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -130,6 +130,51 @@ export const addByToken = async (req, res) => {
         return res.status(201).json({ success: true, message: `${instrument.symbol} added to ${watchlist.name}` });
     } catch (error) {
         console.error('addByToken error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Remove from watchlist by instrument token
+export const removeByToken = async (req, res) => {
+    try {
+        const { token, watchlistName } = req.body;
+        const userId = req.user._id;
+
+        if (!token) {
+            return res.status(400).json({ success: false, message: 'token is required' });
+        }
+
+        // Find the Instrument document for this token
+        const instrument = await Instrument.findOne({ token: String(token) });
+        if (!instrument) {
+            return res.status(404).json({ success: false, message: `Instrument not found for token: ${token}` });
+        }
+
+        const stockId = instrument._id;
+        
+        // Target a specific watchlist or remove from all
+        let query = { user: userId };
+        if (watchlistName) {
+            query.name = watchlistName;
+            
+            const watchlist = await Watchlist.findOne(query);
+            if (watchlist) {
+                watchlist.stocks = watchlist.stocks.filter((id) => id.toString() !== stockId.toString());
+                await watchlist.save();
+                return res.status(200).json({ success: true, message: `${instrument.symbol} removed from ${watchlist.name}` });
+            }
+        } else {
+            // Remove from all watchlists of this user containing the stock
+            await Watchlist.updateMany(
+                { user: userId, stocks: stockId },
+                { $pull: { stocks: stockId } }
+            );
+            return res.status(200).json({ success: true, message: `${instrument.symbol} removed from all watchlists` });
+        }
+
+        return res.status(404).json({ success: false, message: 'Watchlist not found' });
+    } catch (error) {
+        console.error('removeByToken error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

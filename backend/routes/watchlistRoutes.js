@@ -7,7 +7,8 @@ import {
     createWatchlist,
     deleteWatchlist,
     renameWatchlist,
-    addByToken
+    addByToken,
+    removeByToken
 } from '../controllers/watchlistController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -17,6 +18,7 @@ router.route('/getAllWatchlists').get(protect, getAllWatchlists);
 router.route('/createWatchlist').post(protect, createWatchlist);
 router.route('/addToWatchlist').post(protect, addToWatchlist);
 router.route('/addByToken').post(protect, addByToken);
+router.route('/removeByToken').post(protect, removeByToken);
 router.route('/removeFromWatchlist/:stockId').delete(protect, removeFromWatchlist);
 router.route('/deleteWatchlist/:id').delete(protect, deleteWatchlist);
 router.route('/renameWatchlist/:id').put(protect, renameWatchlist);
