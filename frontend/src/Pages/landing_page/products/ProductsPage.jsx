@@ -1,13 +1,57 @@
 import React from 'react';
+import Hero from './Hero';
+import LeftSection from './LeftSection';
+import RightSection from './RightSection';
+import Universe from './Universe';
 
 const ProductsPage = () => {
     return (
-        <>
-            <div className="container mx-auto px-4 py-16 text-center mt-10">
-                <h1 className="text-4xl font-medium text-gray-800 mb-4">Products</h1>
-                <p className="text-lg text-gray-600">Our products go here.</p>
-            </div>
-        </>
+        <div className="bg-[var(--bg-main)] min-h-screen pt-10 pb-20 font-sans transition-colors duration-300">
+            <Hero />
+
+            <LeftSection
+                imageUrl=""
+                title="Kite"
+                description="Our ultra-fast flagship trading platform with streaming market data, advanced charts, an elegant UI, and more. Enjoy the Kite experience seamlessly on your Android and iOS devices."
+                tryDemo="#"
+                learnMore="#"
+                googlePlay="#"
+                appStore="#"
+            />
+
+            <RightSection
+                imageUrl=""
+                title="Console"
+                description="The central dashboard for your account. Gain insights into your trades and investments with in-depth reports and visualisations."
+                learnMore="#"
+            />
+
+            <LeftSection
+                imageUrl=""
+                title="Coin"
+                description="Buy direct mutual funds online, commission-free, delivered directly to your Demat account. Enjoy the investment experience on your Android and iOS devices."
+                learnMore="#"
+                googlePlay="#"
+                appStore="#"
+            />
+
+            <RightSection
+                imageUrl=""
+                title="Kite Connect API"
+                description="Build powerful trading platforms and experiences with our super simple HTTP/JSON APIs. If you are a startup, build your investment app and showcase it to our clientbase."
+                learnMore="#"
+            />
+
+            <LeftSection
+                imageUrl=""
+                title="Varsity mobile"
+                description="An easy to grasp, collection of stock market lessons with in-depth coverage and illustrations. Content is broken down into bite-size cards to help you learn on the go."
+                googlePlay="#"
+                appStore="#"
+            />
+
+            <Universe />
+        </div>
     );
 };
 
