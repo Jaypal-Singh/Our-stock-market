@@ -9,7 +9,7 @@ function Hero() {
                     <h1 className="font-medium text-[#424242] dark:text-[var(--text-primary)] text-[2.1rem] m-0 flex-1">
                         Support Portal
                     </h1>
-                    <button className="bg-[#387ed1] hover:bg-[#2860a1] text-white border border-[#387ed1] rounded-md py-[7px] px-[18px] font-medium text-[1rem] cursor-pointer md:ml-[24px] transition-colors whitespace-nowrap">
+                    <button className="bg-[var(--accent-primary)] hover:opacity-90 text-white border border-[color:var(--accent-primary)] shadow-[var(--shadow-accent)] rounded-md py-[7px] px-[18px] font-medium text-[1rem] cursor-pointer md:ml-[24px] transition-all whitespace-nowrap">
                         My tickets
                     </button>
                 </div>

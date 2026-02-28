@@ -45,7 +45,7 @@ const Hero = () => {
             </div>
 
             {/* Typography and CTA at the top (to match the styling typically above the image in Zerodha-like designs) */}
-            <div className="relative z-50 mb-12 mt-10">
+            <div className="relative z-30 mb-12 mt-16 md:mt-24">
                 <h1 className="text-4xl md:text-[56px] font-medium text-[var(--text-primary)] mb-6 tracking-tight transition-colors duration-300">
                     Invest in everything
                 </h1>
