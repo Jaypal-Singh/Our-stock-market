@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-// import "./TradingAccount.css"; // Not needed, converted to Tailwind
+import { useToast } from "../../../../context/ToastContext";
 
 function TradingAccount() {
     const [isLogin, setIsLogin] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     // Form State
     const [info, setInfo] = useState({
@@ -32,7 +33,7 @@ function TradingAccount() {
 
         // Validation
         if (!email || !password || (!isLogin && !name)) {
-            alert("Please fill in all fields");
+            showToast("Please fill in all fields", "error");
             return;
         }
 
@@ -40,45 +41,49 @@ function TradingAccount() {
             if (isLogin) {
                 // LOGIN LOGIC
                 const res = await axios.post(
-                    `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/login`,
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/login`,
                     { email, password }
                 );
 
-                const { success, message, jwtToken, name: resName } = res.data;
+                // Backend returns: _id, name, email, profilePic, tradingBalance, token
+                const { token, name: resName, ...userData } = res.data;
 
-                if (success) {
-                    localStorage.setItem("token", jwtToken);
+                if (token) {
+                    localStorage.setItem("token", token);
                     localStorage.setItem("loggedInUser", resName);
 
-                    window.location.href = `${process.env.REACT_APP_DASHBOARD_URL || '/trade/watchlist'}?token=${jwtToken}&name=${resName}`;
-                } else {
-                    alert(message);
+                    // Dashboard components expect 'userInfo' object in localStorage
+                    localStorage.setItem("userInfo", JSON.stringify({
+                        ...userData,
+                        name: resName,
+                        token
+                    }));
+
+                    showToast("Login successful! Redirecting...", "success");
+
+                    // Small delay to allow toast to be visible before navigation
+                    setTimeout(() => {
+                        navigate(`/trade/watchlist?token=${token}&name=${resName}`);
+                    }, 800);
                 }
             } else {
                 // SIGNUP LOGIC
                 const res = await axios.post(
-                    `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/signup`,
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/signup`,
                     { name, email, password }
                 );
 
-                if (res.data.success) {
+                // If signup brings back a token, it was successful
+                if (res.data.token) {
+                    showToast("Signup successful! Please login.", "success");
                     setIsLogin(true);
-                } else {
-                    alert(res.data.message || "Signup failed. Try again.");
                 }
             }
         } catch (err) {
-            if (isLogin) {
-                alert("Some error occurred during login.");
-                console.error(err);
-            } else {
-                if (err.response && err.response.data && err.response.data.message) {
-                    alert(err.response.data.message);
-                } else {
-                    alert("An error occurred. Please try again later.");
-                }
-                console.error(err);
-            }
+            // Backend throws errors that are caught by express-async-handler, returning { message: string }
+            const errorMsg = err.response?.data?.message || err.message || "An unexpected error occurred.";
+            showToast(errorMsg, "error");
+            console.error("Auth Error:", err);
         }
     };
 
@@ -160,7 +165,7 @@ function TradingAccount() {
                         </div>
 
                         <button
-                            className="w-full text-white bg-[#387ED1] p-3 rounded-[25px] hover:bg-blue-600 transition-colors"
+                            className="w-full text-white bg-[#387ED1] p-3 rounded-[25px] hover:bg-blue-600 transition-colors cursor-pointer"
                             type="submit"
                         >
                             {isLogin ? "LOGIN" : "SIGN UP"}

@@ -42,6 +42,21 @@ class WebSocketManager {
 
             // Connect to WebSocket
             await this.webSocket.connect();
+
+            // MONKEY PATCH: The smartapi-javascript library has a bug where its internal heartbeat
+            // (pingInterval) might fire before the socket is fully open or after it closes, causing a fatal crash.
+            // We patch the underlying ws.send to silently ignore sends if not OPEN.
+            if (this.webSocket.ws) {
+                const originalSend = this.webSocket.ws.send;
+                this.webSocket.ws.send = function (data, options, cb) {
+                    if (this.readyState === 1) { // 1 is WebSocket.OPEN
+                        originalSend.call(this, data, options, cb);
+                    } else {
+                        logger.warn(`Ignored ws.send because readyState is ${this.readyState}`);
+                    }
+                };
+            }
+
             this.isConnected = true;
             this.reconnectAttempts = 0;
 
@@ -103,10 +118,21 @@ class WebSocketManager {
      * Send subscription request
      * @param {object} request - { correlationID, action, mode, exchangeType, tokens }
      */
-    subscribe(request) {
+    async subscribe(request) {
         if (!this.isConnected || !this.webSocket) {
             logger.error('Cannot subscribe - WebSocket not connected');
             return { success: false, message: 'WebSocket not connected' };
+        }
+
+        // Wait for WebSocket to be fully open before subscribing
+        if (this.webSocket.ws && this.webSocket.ws.readyState !== 1) { // 1 = OPEN
+            logger.warn(`WebSocket is not open (readyState ${this.webSocket.ws.readyState}). Waiting...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (this.webSocket.ws && this.webSocket.ws.readyState !== 1) {
+                logger.error('WebSocket failed to reach OPEN state after waiting.');
+                return { success: false, message: 'WebSocket not ready' };
+            }
         }
 
         try {

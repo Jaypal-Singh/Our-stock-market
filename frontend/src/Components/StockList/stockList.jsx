@@ -117,19 +117,28 @@ function StockList() {
     }, []);
 
     const fetchWatchlists = async () => {
+        setIsLoading(true);
         try {
             const config = getAuthConfig();
-            if (!config) return;
+            if (!config) {
+                setIsLoading(false);
+                return;
+            }
             const res = await axios.get('http://localhost:5000/api/watchlist/getAllWatchlists', config);
             console.log("Fetched watchlists:", res.data);
             setWatchlists(res.data || []);
-            if (res.data && res.data.length > 0 && !activeWatchlist) {
-                setActiveWatchlist(res.data[0]); // Default to first
+            if (res.data && res.data.length > 0) {
+                if (!activeWatchlist) {
+                    setActiveWatchlist(res.data[0]); // Default to first
+                }
+            } else {
+                setIsLoading(false); // Stop loading if no watchlists exist
             }
             // If activeWatchlist was already set (e.g. from state persistence), ensure it's valid?
         } catch (error) {
             console.error("Error fetching watchlists", error);
             setWatchlists([]);
+            setIsLoading(false);
         }
     };
 
@@ -578,11 +587,15 @@ function StockList() {
                         );
                     })
                 ) : (
-                    <EmptyWatchlist onAddClick={() => {
-                        if (searchRef.current) {
-                            searchRef.current.openSearch();
-                        }
-                    }} />
+                    <EmptyWatchlist
+                        hasWatchlists={watchlists && watchlists.length > 0}
+                        onCreateClick={() => setIsCreateModalOpen(true)}
+                        onAddClick={() => {
+                            if (searchRef.current) {
+                                searchRef.current.openSearch();
+                            }
+                        }}
+                    />
                 )}
             </div>
 

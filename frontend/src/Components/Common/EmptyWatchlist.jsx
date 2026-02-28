@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 
-const EmptyWatchlist = ({ onAddClick }) => {
+const EmptyWatchlist = ({ onAddClick, onCreateClick, hasWatchlists }) => {
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-6 pb-20">
             {/* Illustration Placeholder - Using a generic SVG structure similar to the image */}
@@ -35,19 +35,19 @@ const EmptyWatchlist = ({ onAddClick }) => {
             </div>
 
             <h3 className="text-[#333333] dark:text-[#d1d4dc] text-lg font-medium mb-2">
-                This Watchlist is Empty
+                Your Watchlist is Empty
             </h3>
 
             <p className="text-[#666666] dark:text-[#868993] text-sm max-w-[280px] mb-8">
-                Track price movements of securities of your interest by adding them to this watchlist
+                Create a new watchlist and search for stocks to add them here. Start tracking your favorite companies today!
             </p>
 
             <button
-                onClick={onAddClick}
-                className="flex items-center gap-2 text-[#2962FF] font-medium text-sm hover:bg-[#2962FF]/10 px-4 py-2 rounded transition-colors"
+                onClick={hasWatchlists ? onAddClick : onCreateClick}
+                className="flex items-center justify-center gap-2 bg-[#2962FF] text-white font-medium text-sm hover:bg-[#1E4BD8] px-6 py-2.5 rounded shadow-sm transition-colors"
             >
                 <Plus size={18} />
-                ADD TO WATCHLIST
+                {hasWatchlists ? "Search & Add Stocks" : "Create Watchlist"}
             </button>
         </div>
     );
