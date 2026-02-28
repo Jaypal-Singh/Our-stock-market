@@ -31,12 +31,12 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] max-w-6xl z-50 transition-all duration-300">
+    <nav className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] max-w-6xl z-[100] transition-all duration-300">
 
       {/* Floating Pill Container with Glassmorphism */}
       <div className={`px-5 py-3 md:px-6 md:py-3.5 rounded-full flex justify-between items-center transition-all duration-300 ${scrolled
-          ? 'bg-[var(--bg-main)]/80 backdrop-blur-lg border border-[var(--border-primary)] shadow-[var(--shadow-premium)]'
-          : 'bg-[var(--bg-card)]/60 backdrop-blur-md border border-[var(--border-primary)] shadow-lg'
+        ? 'bg-[var(--bg-main)]/60 backdrop-blur-2xl border border-[var(--border-primary)] shadow-[var(--shadow-premium)]'
+        : 'bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-primary)] shadow-lg'
         }`}>
 
         {/* Logo (Left) */}
@@ -55,8 +55,8 @@ const Navbar = () => {
               key={link.name}
               to={link.path}
               className={`px-3 py-1.5 rounded-full text-[15px] font-medium transition-colors duration-200 ${location.pathname === link.path
-                  ? 'text-[color:var(--accent-primary)] bg-[color:var(--accent-primary)]/10'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                ? 'text-[color:var(--accent-primary)] bg-[color:var(--accent-primary)]/10'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 }`}
             >
               {link.name}
@@ -104,7 +104,7 @@ const Navbar = () => {
           {/* Call to Action Button (Replacing the plain text Signup link to match the reference image) */}
           <Link
             to="/signup"
-            className="hidden md:inline-flex items-center justify-center px-6 py-2 rounded-full text-[15px] font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+            className="hidden md:inline-flex items-center justify-center px-6 py-2 rounded-full text-[15px] font-medium text-[#ffffff] bg-[var(--accent-primary)] hover:opacity-90 shadow-[var(--shadow-accent)] border border-[#5c6bc0] transition-all duration-300 transform hover:-translate-y-0.5"
           >
             Sign up
           </Link>
@@ -132,8 +132,8 @@ const Navbar = () => {
                 to={link.path}
                 onClick={toggleMobileMenu}
                 className={`block px-4 py-3 rounded-xl font-medium text-base transition-colors duration-200 ${location.pathname === link.path
-                    ? 'text-[color:var(--accent-primary)] bg-[color:var(--accent-primary)]/10'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                  ? 'text-[color:var(--accent-primary)] bg-[color:var(--accent-primary)]/10'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                   }`}
               >
                 {link.name}
@@ -147,7 +147,7 @@ const Navbar = () => {
             <Link
               to="/signup"
               onClick={toggleMobileMenu}
-              className="block w-full text-center px-4 py-3 rounded-xl font-medium text-base text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 transition-opacity"
+              className="block w-full text-center px-4 py-3 rounded-xl font-medium text-base text-[#ffffff] bg-[var(--accent-primary)] hover:opacity-90 transition-opacity shadow-[var(--shadow-accent)] border border-[#5c6bc0]"
             >
               Sign up
             </Link>
