@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronUp, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 const getAuthConfig = () => {
     try {
         const userInfo = JSON.parse(localStorage.getItem('userInfo'));
@@ -30,7 +33,7 @@ const MarketDepthBottomSheet = ({ isOpen, onClose, stock }) => {
                 const config = getAuthConfig();
                 if (!config) return;
 
-                const response = await axios.post('http://localhost:5000/api/angel/market-depth', {
+                const response = await axios.post(`${API_BASE_URL}/api/angel/market-depth`, {
                     token: stock.token,
                     exch_seg: stock.exch_seg || "NSE"
                 }, config);
