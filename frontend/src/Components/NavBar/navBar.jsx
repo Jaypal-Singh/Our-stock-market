@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bell, ChevronDown, Home, Triangle } from "lucide-react";
 import MarketIndicesStrip from "../Common/MarketIndicesStrip";
+import logo from "../../assets/logo/moneydocklogofinal.png";
+
 
 function NavBar() {
     const location = useLocation();
@@ -32,11 +34,9 @@ function NavBar() {
             {/* Left Section: Logo & Indices */}
             <div className="flex items-center gap-8">
                 {/* Logo */}
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 md:w-10 md:h-10">
-                        <Triangle className="text-green-500 fill-current rotate-180" size={32} strokeWidth={0} />
-                    </div>
-                </div>
+                <Link className="flex items-center">
+                    <img src={logo} alt="MoneyDock" className="h-auto w-28 object-contain" />
+                </Link>
 
                 {/* Live Indices */}
                 <div className="hidden md:flex">

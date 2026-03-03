@@ -6,6 +6,9 @@ import { useToast } from "../../../context/ToastContext";
 import useAngelOneSocket from "../../../Hooks/useAngelOneSocket";
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 /**
  * BuyWindow Component
  * A movable window for placing buy orders.
@@ -32,7 +35,7 @@ const BuyWindow = ({ uid, stockName = "NTPC", stockSymbol, stockPrice = 0, stock
                 if (!userInfo || !userInfo.token) return;
 
                 const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+                const { data } = await axios.get(`${API_BASE_URL}/api/auth/profile`, config);
 
                 const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
                 localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));

@@ -92,15 +92,15 @@ const PositionsTable = ({ positions = [], onAction }) => {
                                     </td>
                                     <td className="py-4 text-right pr-4 align-middle">
                                         {pos.isFnO && (
-                                            <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-2 justify-end">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onAction && onAction('sell', pos.rawPos); }}
-                                                    className="bg-[var(--bg-secondary)] text-red-500 px-3 py-1.5 rounded text-xs font-bold border border-[var(--border-primary)] hover:bg-red-500/10 transition-colors">
+                                                    className="bg-[var(--bg-secondary)] text-red-500 px-3 py-1.5 rounded text-xs font-bold border border-[var(--border-primary)] hover:bg-red-500/10 transition-colors cursor-pointer">
                                                     EXIT
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onAction && onAction('buy', pos.rawPos); }}
-                                                    className="bg-[var(--accent-primary)] text-white px-3 py-1.5 rounded text-xs font-bold hover:opacity-90 transition-colors">
+                                                    className="bg-[var(--accent-primary)] text-white px-3 py-1.5 rounded text-xs font-bold hover:opacity-90 transition-colors cursor-pointer">
                                                     ADD
                                                 </button>
                                             </div>
