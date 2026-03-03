@@ -4,6 +4,9 @@ import axios from 'axios';
 import AddFundsModal from '../../../../Components/Common/AddFundsModal';
 import WithdrawFundsModal from '../../../../Components/Common/WithdrawFundsModal';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 const FundsBanner = () => {
     const [balance, setBalance] = useState(0);
     const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
@@ -28,7 +31,7 @@ const FundsBanner = () => {
                     },
                 };
 
-                const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+                const { data } = await axios.get(`${API_BASE_URL}/api/auth/profile`, config);
 
                 // Update local storage
                 const updatedUserInfo = { ...userInfo, tradingBalance: data.tradingBalance };
@@ -65,7 +68,7 @@ const FundsBanner = () => {
             };
 
             const { data } = await axios.put(
-                'http://localhost:5000/api/auth/profile/balance',
+                `${API_BASE_URL}/api/auth/profile/balance`,
                 { action, amount },
                 config
             );
@@ -112,14 +115,14 @@ const FundsBanner = () => {
                 <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
                     <button
                         onClick={() => setIsWithdrawFundsOpen(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#4d5162] text-[#6b82fe] bg-transparent text-xs font-semibold hover:border-[#6b82fe] transition-colors whitespace-nowrap cursor-pointer"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#4f46e5] text-[#4f46e5] bg-transparent text-xs font-semibold hover:border-[#6b82fe] transition-colors whitespace-nowrap cursor-pointer"
                     >
                         <Wallet size={14} className="stroke-2 opacity-80" />
                         WITHDRAW FUNDS
                     </button>
                     <button
                         onClick={() => setIsAddFundsOpen(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#6b82fe] text-white text-xs font-semibold hover:bg-[#5b72ee] transition-colors whitespace-nowrap cursor-pointer"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#4f46e5] text-white text-xs font-semibold hover:bg-[#5b72ee] transition-colors whitespace-nowrap cursor-pointer"
                     >
                         <Wallet size={14} className="stroke-2 opacity-90" />
                         ADD FUNDS

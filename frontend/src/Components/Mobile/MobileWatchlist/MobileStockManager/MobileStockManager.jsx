@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, GripVertical } from 'lucide-react';
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 const MobileStockManager = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -52,7 +55,7 @@ const MobileStockManager = () => {
 
             const deletePromises = Array.from(selectedIds).map(stockId =>
                 axios.delete(
-                    `http://localhost:5000/api/watchlist/removeFromWatchlist/${stockId}?watchlistName=${watchlistName}`,
+                    `${API_BASE_URL}/api/watchlist/removeFromWatchlist/${stockId}?watchlistName=${watchlistName}`,
                     config
                 )
             );

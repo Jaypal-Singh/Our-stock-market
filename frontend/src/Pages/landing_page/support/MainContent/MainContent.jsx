@@ -1,216 +1,158 @@
 import React, { useState, useRef, useEffect } from "react";
-import { PlusCircle, UserCircle, Globe, IndianRupee, AtSign, Coins, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+    PlusCircle, UserCircle, Globe, IndianRupee, AtSign, PiggyBank,
+    ChevronDown, ChevronUp, Bell, ArrowRight, Zap
+} from 'lucide-react';
 
-// Accordion Item Component with animation
-function AccordionItem({ icon: Icon, title, children, expanded, onClick }) {
+const categories = [
+    {
+        icon: PlusCircle, label: 'Account Opening', color: 'text-blue-400', iconBg: 'bg-blue-500/10 border-blue-500/20',
+        links: ['Resident individual', 'Minor', 'Non Resident Indian (NRI)', 'Company, Partnership, HUF and LLP', 'Glossary']
+    },
+    {
+        icon: UserCircle, label: 'Your MoneyDock Account', color: 'text-purple-400', iconBg: 'bg-purple-500/10 border-purple-500/20',
+        links: ['Your Profile', 'Account modification', 'Client Master Report (CMR) and DP', 'Nomination', 'Transfer and conversion of securities']
+    },
+    {
+        icon: Globe, label: 'Trading Platform', color: 'text-emerald-400', iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+        links: ['IPO', 'Trading FAQs', 'Margin Trading Facility (MTF) and Margins', 'Charts and orders', 'Alerts and Nudges', 'General']
+    },
+    {
+        icon: IndianRupee, label: 'Funds', color: 'text-orange-400', iconBg: 'bg-orange-500/10 border-orange-500/20',
+        links: ['Add money', 'Withdraw money', 'Add bank accounts', 'eMandates']
+    },
+    {
+        icon: AtSign, label: 'Console', color: 'text-cyan-400', iconBg: 'bg-cyan-500/10 border-cyan-500/20',
+        links: ['Portfolio', 'Corporate actions', 'Funds statement', 'Reports', 'Profile', 'Segments']
+    },
+    {
+        icon: PiggyBank, label: 'MoneyDock Funds', color: 'text-pink-400', iconBg: 'bg-pink-500/10 border-pink-500/20',
+        links: ['Mutual funds', 'National Pension Scheme (NPS)', 'Fixed Deposit (FD)', 'Features', 'Payments and Orders', 'General']
+    },
+];
+
+const quickLinks = [
+    'Track account opening',
+    'Track segment activation',
+    'Intraday margins',
+    'Platform user manual',
+    'Charges & fees',
+    'Contact support',
+];
+
+const announcements = [
+    'Exclusion of F&O contracts on 8 securities from August 29, 2025',
+    'Revision in expiry day of Index and Stock derivatives contracts',
+];
+
+/* ── Accordion Item ── */
+function AccordionItem({ icon: Icon, label, color, iconBg, links, expanded, onClick }) {
     const contentRef = useRef(null);
     const [height, setHeight] = useState(0);
 
     useEffect(() => {
-        if (expanded && contentRef.current) {
-            setHeight(contentRef.current.scrollHeight);
-        } else {
-            setHeight(0);
-        }
-    }, [expanded, children]);
+        setHeight(expanded && contentRef.current ? contentRef.current.scrollHeight : 0);
+    }, [expanded]);
 
     return (
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md mb-4 overflow-hidden">
-            <div
-                className={`flex items-center cursor-pointer transition-all duration-200 ${expanded
-                    ? "bg-[var(--bg-tertiary)] px-8 py-6"
-                    : "bg-[var(--bg-secondary)] px-6 py-4 hover:bg-[var(--bg-tertiary)] hover:px-8 hover:py-6"
-                    }`}
+        <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${expanded ? 'border-[var(--accent-primary)]/30 shadow-md' : 'border-[var(--border-primary)] hover:border-[var(--accent-primary)]/20'} bg-[var(--bg-card)]`}>
+            <button
+                className="w-full flex items-center gap-4 px-5 py-4 text-left group"
                 onClick={onClick}
             >
-                <span className="text-[#387ed1] mr-4 shrink-0 transition-all duration-200">
-                    <Icon size={24} />
+                <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${expanded ? iconBg : 'bg-[var(--bg-secondary)] border-[var(--border-primary)]'}`}>
+                    <Icon size={17} className={expanded ? color : 'text-[var(--text-muted)]'} />
+                </div>
+                <span className={`font-semibold text-[15px] flex-1 transition-colors ${expanded ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}`}>
+                    {label}
                 </span>
-                <span className={`font-medium text-[var(--text-primary)] transition-all duration-200 ${expanded ? 'text-xl' : 'text-lg hover:text-xl'}`}>
-                    {title}
-                </span>
-                <span className="ml-auto text-[#387ed1]">
-                    {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </span>
-            </div>
+                {expanded
+                    ? <ChevronUp size={17} className={color} />
+                    : <ChevronDown size={17} className="text-[var(--text-muted)]" />
+                }
+            </button>
+
             <div
                 ref={contentRef}
-                style={{
-                    height: expanded ? `${height}px` : "0px",
-                    opacity: expanded ? 1 : 0,
-                }}
-                className={`transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)] overflow-hidden bg-[var(--bg-secondary)] ${expanded ? "border-t border-[var(--border-primary)]" : ""
-                    }`}
+                style={{ height: `${height}px`, opacity: expanded ? 1 : 0 }}
+                className="transition-all duration-300 ease-in-out overflow-hidden border-t border-[var(--border-primary)]"
             >
-                <div className="px-8 py-5">
-                    {children}
+                <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {links.map((link, i) => (
+                        <a key={i} href="#"
+                            className={`flex items-center gap-2 text-[13.5px] font-medium ${color} hover:opacity-75 transition-opacity py-1`}
+                        >
+                            <ArrowRight size={13} />
+                            {link}
+                        </a>
+                    ))}
                 </div>
             </div>
         </div>
     );
 }
 
-// Main Content Component
 function MainContent() {
     const [openIndex, setOpenIndex] = useState(-1);
-
-    const listItemClasses = "mb-2 text-[var(--text-secondary)]";
-    const linkClasses = "text-[#387ed1] hover:underline font-medium text-[15px]";
 
     return (
         <div className="pb-20">
             <div className="container mx-auto px-4 mt-8 flex flex-col md:flex-row gap-8 max-w-6xl">
-                {/* Left: Accordion */}
-                <div className="w-full md:w-2/3">
-                    <AccordionItem
-                        icon={PlusCircle}
-                        title="Account Opening"
-                        expanded={openIndex === 0}
-                        onClick={() => setOpenIndex(openIndex === 0 ? -1 : 0)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Resident individual</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Minor</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Non Resident Indian (NRI)</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Company, Partnership, HUF and LLP</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Glossary</a></li>
-                        </ul>
-                    </AccordionItem>
 
-                    <AccordionItem
-                        icon={UserCircle}
-                        title="Your MoneyDock Account"
-                        expanded={openIndex === 1}
-                        onClick={() => setOpenIndex(openIndex === 1 ? -1 : 1)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Your Profile</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Account modification</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Client Master Report (CMR) and Depository Participant (DP)</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Nomination</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Transfer and conversion of securities</a></li>
-                        </ul>
-                    </AccordionItem>
-
-                    <AccordionItem
-                        icon={Globe}
-                        title="Trading Platform"
-                        expanded={openIndex === 2}
-                        onClick={() => setOpenIndex(openIndex === 2 ? -1 : 2)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>IPO</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Trading FAQs</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Margin Trading Facility (MTF) and Margins</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Charts and orders</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Alerts and Nudges</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>General</a></li>
-                        </ul>
-                    </AccordionItem>
-
-                    <AccordionItem
-                        icon={IndianRupee}
-                        title="Funds"
-                        expanded={openIndex === 3}
-                        onClick={() => setOpenIndex(openIndex === 3 ? -1 : 3)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Add money</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Withdraw money</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Add bank accounts</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>eMandates</a></li>
-                        </ul>
-                    </AccordionItem>
-
-                    <AccordionItem
-                        icon={AtSign}
-                        title="Console"
-                        expanded={openIndex === 4}
-                        onClick={() => setOpenIndex(openIndex === 4 ? -1 : 4)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Portfolio</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Corporate actions</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Funds statement</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Reports</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Profile</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Segments</a></li>
-                        </ul>
-                    </AccordionItem>
-
-                    <AccordionItem
-                        icon={Coins}
-                        title="Coin"
-                        expanded={openIndex === 5}
-                        onClick={() => setOpenIndex(openIndex === 5 ? -1 : 5)}
-                    >
-                        <ul className="pl-5 m-0 list-disc text-[#387ed1]">
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Mutual funds</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>National Pension Scheme (NPS)</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Fixed Deposit (FD)</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Features on Coin</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>Payments and Orders</a></li>
-                            <li className={listItemClasses}><a href="#" className={linkClasses}>General</a></li>
-                        </ul>
-                    </AccordionItem>
+                {/* ── Left: Accordion ── */}
+                <div className="w-full md:w-2/3 space-y-3">
+                    {categories.map((cat, i) => (
+                        <AccordionItem
+                            key={i}
+                            {...cat}
+                            expanded={openIndex === i}
+                            onClick={() => setOpenIndex(openIndex === i ? -1 : i)}
+                        />
+                    ))}
                 </div>
 
-                {/* Right: News and Quick Links */}
-                <div className="w-full md:w-1/3 flex flex-col gap-6">
-                    {/* Announcements Box */}
-                    <div className="bg-[#ffa726]/15 rounded-md p-6 border-l-4 border-l-[#ffa726]">
-                        <ul className="pl-5 m-0 list-disc text-[#ffa726]">
-                            <li className="mb-3 text-[15px]">
-                                <a href="#" className="text-[var(--text-primary)] hover:text-[#387ed1] transition-colors">
-                                    Exclusion of F&O contracts on 8 securities from August 29, 2025
-                                </a>
-                            </li>
-                            <li className="text-[15px]">
-                                <a href="#" className="text-[var(--text-primary)] hover:text-[#387ed1] transition-colors">
-                                    Revision in expiry day of Index and Stock derivatives contracts
-                                </a>
-                            </li>
+                {/* ── Right: Notices + Quick Links ── */}
+                <div className="w-full md:w-1/3 flex flex-col gap-5">
+
+                    {/* Announcements */}
+                    <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/5 overflow-hidden">
+                        <div className="flex items-center gap-2 px-5 py-3 border-b border-amber-500/20">
+                            <Bell size={14} className="text-amber-400" />
+                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Announcements</span>
+                        </div>
+                        <ul className="px-5 py-4 space-y-3">
+                            {announcements.map((ann, i) => (
+                                <li key={i} className="flex gap-2.5 text-[13.5px]">
+                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                                    <a href="#" className="text-[var(--text-secondary)] hover:text-amber-400 transition-colors leading-relaxed">
+                                        {ann}
+                                    </a>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
-                    {/* Quick Links Table Box */}
-                    <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md overflow-hidden">
-                        <div className="font-semibold text-lg py-3 px-5 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)] text-[var(--text-primary)]">
-                            Quick links
+                    {/* Quick Links */}
+                    <div className="rounded-2xl border border-[var(--border-primary)] bg-[var(--bg-card)] overflow-hidden">
+                        <div className="flex items-center gap-2 px-5 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+                            <Zap size={14} className="text-[var(--accent-primary)]" />
+                            <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">Quick Links</span>
                         </div>
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr className="border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-tertiary)] transition-colors">
-                                    <td className="p-4 relative">
-                                        <a href="#" className="font-medium text-[#387ed1] hover:underline flex items-center">
-                                            <span className="w-4 mr-2">1.</span> Track account opening
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-tertiary)] transition-colors">
-                                    <td className="p-4 relative">
-                                        <a href="#" className="font-medium text-[#387ed1] hover:underline flex items-center">
-                                            <span className="w-4 mr-2">2.</span> Track segment activation
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-tertiary)] transition-colors">
-                                    <td className="p-4 relative">
-                                        <a href="#" className="font-medium text-[#387ed1] hover:underline flex items-center">
-                                            <span className="w-4 mr-2">3.</span> Intraday margins
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-tertiary)] transition-colors">
-                                    <td className="p-4 relative">
-                                        <a href="#" className="font-medium text-[#387ed1] hover:underline flex items-center">
-                                            <span className="w-4 mr-2">4.</span> Platform user manual
-                                        </a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div className="divide-y divide-[var(--border-primary)]">
+                            {quickLinks.map((link, i) => (
+                                <a key={i} href="#"
+                                    className="flex items-center gap-3 px-5 py-3.5 text-[13.5px] font-medium text-[color:var(--accent-primary)] hover:bg-[var(--bg-secondary)] transition-colors group"
+                                >
+                                    <span className="w-5 h-5 rounded-full bg-[var(--accent-primary)]/10 text-[10px] font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--accent-primary)]/20">
+                                        {i + 1}
+                                    </span>
+                                    {link}
+                                    <ArrowRight size={13} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </a>
+                            ))}
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>

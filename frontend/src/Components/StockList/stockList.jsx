@@ -22,6 +22,8 @@ import RenameWatchlistModal from "../Common/RenameWatchlistModal";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function StockList() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -124,7 +126,7 @@ function StockList() {
                 setIsLoading(false);
                 return;
             }
-            const res = await axios.get('http://localhost:5000/api/watchlist/getAllWatchlists', config);
+            const res = await axios.get(`${API_BASE_URL}/api/watchlist/getAllWatchlists`, config);
             console.log("Fetched watchlists:", res.data);
             setWatchlists(res.data || []);
             if (res.data && res.data.length > 0) {
@@ -157,7 +159,7 @@ function StockList() {
         try {
             const config = getAuthConfig();
             if (!config) return;
-            const res = await axios.get(`http://localhost:5000/api/watchlist/${name}`, config);
+            const res = await axios.get(`${API_BASE_URL}/api/watchlist/${name}`, config);
             const instruments = res.data;
 
             if (instruments.length === 0) {
@@ -260,7 +262,7 @@ function StockList() {
             const config = getAuthConfig();
             if (!config) return;
             const watchlistName = activeWatchlist?.name || activeWatchlist;
-            await axios.post('http://localhost:5000/api/watchlist/addToWatchlist', {
+            await axios.post(`${API_BASE_URL}/api/watchlist/addToWatchlist`, {
                 stockId: stock._id,
                 watchlistName: watchlistName,
             }, config);
@@ -279,7 +281,7 @@ function StockList() {
             const config = getAuthConfig();
             if (!config) return;
             const watchlistName = activeWatchlist?.name || activeWatchlist;
-            await axios.delete(`http://localhost:5000/api/watchlist/removeFromWatchlist/${stock._id}?watchlistName=${watchlistName}`, config);
+            await axios.delete(`${API_BASE_URL}/api/watchlist/removeFromWatchlist/${stock._id}?watchlistName=${watchlistName}`, config);
             // Refresh the stock list after removing
             if (typeof watchlistName === 'string') {
                 fetchWatchlistStocks(watchlistName);
@@ -319,7 +321,7 @@ function StockList() {
         try {
             const config = getAuthConfig();
             if (!config) return;
-            const res = await axios.post('http://localhost:5000/api/watchlist/createWatchlist', { name }, config);
+            const res = await axios.post(`${API_BASE_URL}/api/watchlist/createWatchlist`, { name }, config);
             await fetchWatchlists();
             setActiveWatchlist(res.data);
         } catch (error) {
@@ -341,7 +343,7 @@ function StockList() {
         try {
             const config = getAuthConfig();
             if (!config) return;
-            await axios.delete(`http://localhost:5000/api/watchlist/deleteWatchlist/${watchlist._id}`, config);
+            await axios.delete(`${API_BASE_URL}/api/watchlist/deleteWatchlist/${watchlist._id}`, config);
             await fetchWatchlists();
             // If deleted the active one, switch to first available
             if (activeWatchlist?._id === watchlist._id) {
@@ -356,7 +358,7 @@ function StockList() {
         try {
             const config = getAuthConfig();
             if (!config) return;
-            const res = await axios.put(`http://localhost:5000/api/watchlist/renameWatchlist/${renameTarget._id}`, { name: newName }, config);
+            const res = await axios.put(`${API_BASE_URL}/api/watchlist/renameWatchlist/${renameTarget._id}`, { name: newName }, config);
             await fetchWatchlists();
             // If renamed the active one, update it
             if (activeWatchlist?._id === renameTarget._id) {
